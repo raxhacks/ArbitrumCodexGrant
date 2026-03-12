@@ -1,0 +1,17 @@
+{
+  "name": "1st",
+  "version": "1.0.0",
+  "main": "002_StylusCacheBidSubmit_ethers.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "ethereum-cryptography": "^3.2.0",
+    "ethers": "^6.16.0",
+    "web3": "^4.16.0"
+  }
+}
