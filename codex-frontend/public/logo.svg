@@ -1,0 +1,14 @@
+<svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="22" cy="22" r="21" stroke="#2d9cdb" stroke-width="1.5" fill="none" opacity="0.4"/>
+  <circle cx="22" cy="22" r="18" stroke="#2d9cdb" stroke-width="0.4" fill="none" opacity="0.15" stroke-dasharray="2 3"/>
+  <path d="M22 6L36 14V30L22 38L8 30V14L22 6Z" fill="#0d2240" stroke="#2d9cdb" stroke-width="1" stroke-opacity="0.4"/>
+  <path d="M22 10L32 16V28L22 34L12 28V16L22 10Z" fill="none" stroke="#2d9cdb" stroke-width="0.5" stroke-opacity="0.2"/>
+  <path d="M22 14L28 18V26L22 30L16 26V18L22 14Z" fill="none" stroke="#2d9cdb" stroke-width="0.3" stroke-opacity="0.12"/>
+  <g transform="translate(22, 22)"><text x="-1" y="7" text-anchor="middle" font-family="Arial" font-weight="900" font-style="italic" font-size="22" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.9" transform="skewX(-4)">C</text></g>
+  <path d="M12 20L8.5 22L12 24" stroke="#56ccf2" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+  <path d="M32 20L35.5 22L32 24" stroke="#56ccf2" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+  <circle cx="22" cy="6" r="1.2" fill="#2d9cdb" opacity="0.5"/>
+  <circle cx="22" cy="38" r="1.2" fill="#56ccf2" opacity="0.4"/>
+  <circle cx="8" cy="14" r="0.8" fill="#56ccf2" opacity="0.3"/>
+  <circle cx="36" cy="14" r="0.8" fill="#2d9cdb" opacity="0.3"/>
+</svg>
