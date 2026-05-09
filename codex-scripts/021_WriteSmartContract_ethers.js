@@ -1,11 +1,10 @@
 const { ethers } = require("ethers");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const PRIVATE_KEY = "YOUR_PRIVATE_KEY_HERE";
-const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS_HERE";
+const PRIVATE_KEY = process.env.PRIVATE_KEY || ethers.Wallet.createRandom().privateKey;
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0x912CE59144191C1204E64559FE8253a0e49E6548";
+const DRY_RUN = process.env.DRY_RUN !== "false";
 
-// ==================== ABI ====================
 // Replace with your contract's ABI (functions you want to call)
 const CONTRACT_ABI = [
     // Example state-changing functions
@@ -20,23 +19,23 @@ const CONTRACT_ABI = [
     "function owner() external view returns (address)",
 ];
 
-// ==================== TX CONFIGURATION ====================
-const FUNCTION_NAME = "set";                   // Function to call
-const FUNCTION_ARGS = [42];                    // Arguments to pass
+const FUNCTION_NAME = "transfer";
+let FUNCTION_ARGS = null;
 const VALUE_TO_SEND = ethers.parseEther("0");  // ETH to send with tx (0 for non-payable)
 const GAS_LIMIT = null;                        // null = auto estimate
 const MAX_FEE_PER_GAS = null;                  // null = auto
 const MAX_PRIORITY_FEE = null;                 // null = auto
 
-// ==================== MAIN ====================
 async function writeToContract() {
     const provider = new ethers.JsonRpcProvider(RPC_URL);
     const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
     const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
 
+    if (FUNCTION_ARGS === null) FUNCTION_ARGS = [wallet.address, 0n];
+
     const network = await provider.getNetwork();
 
-    console.log("==================== ACCOUNT ====================");
+    console.log("ACCOUNT");
     console.log("Wallet:", wallet.address);
     console.log("Chain ID:", network.chainId.toString());
 
@@ -52,7 +51,7 @@ async function writeToContract() {
     console.log("Contract:", CONTRACT_ADDRESS);
 
     // Encode function call
-    console.log("\n==================== FUNCTION CALL ====================");
+    console.log("\nFUNCTION CALL");
     console.log("Function:", FUNCTION_NAME);
     console.log("Arguments:", FUNCTION_ARGS);
     console.log("Value:", ethers.formatEther(VALUE_TO_SEND), "ETH");
@@ -62,7 +61,7 @@ async function writeToContract() {
     console.log("Encoded data:", encodedData);
 
     // Estimate gas
-    console.log("\n==================== GAS ESTIMATION ====================");
+    console.log("\nGAS ESTIMATION");
     const feeData = await provider.getFeeData();
     const gasPrice = feeData.gasPrice ?? feeData.maxFeePerGas ?? 0n;
     console.log("Base fee:", ethers.formatUnits(gasPrice, "gwei"), "gwei");
@@ -95,7 +94,7 @@ async function writeToContract() {
     console.log("Nonce:", nonce);
 
     // Simulate call (static call to check for revert)
-    console.log("\n==================== SIMULATION ====================");
+    console.log("\nSIMULATION");
     try {
         const result = await contract[FUNCTION_NAME].staticCall(...FUNCTION_ARGS, { value: VALUE_TO_SEND });
         console.log("Simulation result:", result !== undefined ? result.toString() : "void");
@@ -107,8 +106,10 @@ async function writeToContract() {
         process.exit(1);
     }
 
+    if (DRY_RUN) return;
+
     // Send transaction
-    console.log("\n==================== SENDING TRANSACTION ====================");
+    console.log("\nSENDING TRANSACTION");
     const tx = await contract[FUNCTION_NAME](...FUNCTION_ARGS, overrides);
 
     console.log("Tx hash:", tx.hash);
@@ -118,7 +119,7 @@ async function writeToContract() {
 
     const receipt = await tx.wait();
 
-    console.log("\n==================== RECEIPT ====================");
+    console.log("\nRECEIPT");
     console.log("Status:", receipt.status === 1 ? "SUCCESS" : "REVERTED");
     console.log("Block:", receipt.blockNumber);
     console.log("Gas used:", receipt.gasUsed.toString());
@@ -127,7 +128,7 @@ async function writeToContract() {
 
     // Decode logs
     if (receipt.logs.length > 0) {
-        console.log("\n==================== EVENTS ====================");
+        console.log("\nEVENTS");
         console.log("Total events:", receipt.logs.length);
         receipt.logs.forEach((log, index) => {
             try {

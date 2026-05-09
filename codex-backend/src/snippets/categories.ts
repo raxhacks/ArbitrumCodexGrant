@@ -1,24 +1,21 @@
-import rawSnippets from "./snippets-raw.json";
+export const CATEGORIES = [
+  "Stylus & DeFi",
+  "Timeboost",
+  "Arbitrum Infrastructure",
+  "Wallet & Signing",
+  "Smart Contracts",
+  "RPC & Blocks",
+] as const;
 
-export type VariantKey = "ethers" | "web3" | "solidity";
+export type Category = (typeof CATEGORIES)[number];
 
-export interface Snippet {
-  id: string;
-  name: string;
+interface SnippetMeta {
   title: string;
   description: string;
-  category: string;
-  variants: Partial<Record<VariantKey, string>>;
-  language: "javascript" | "solidity";
+  category: Category;
 }
 
-interface RawSnippet {
-  id: string;
-  name: string;
-  variants: Partial<Record<string, string>>;
-}
-
-const META: Record<string, { title: string; description: string; category: string }> = {
+export const SNIPPET_META: Record<string, SnippetMeta> = {
   "001_ARBPriceOracle": {
     title: "ARB Price Oracle",
     description: "Fetch the latest ARB/USD price from Chainlink oracles on Arbitrum One and Sepolia testnet",
@@ -165,35 +162,3 @@ const META: Record<string, { title: string; description: string; category: strin
     category: "Smart Contracts",
   },
 };
-
-export const CATEGORIES = [
-  "Stylus & DeFi",
-  "Timeboost",
-  "Arbitrum Infrastructure",
-  "Wallet & Signing",
-  "Smart Contracts",
-  "RPC & Blocks",
-];
-
-export const snippets: Snippet[] = (rawSnippets as RawSnippet[]).map((raw) => {
-  const key = `${raw.id}_${raw.name}`;
-  const meta = META[key] || {
-    title: raw.name.replace(/([A-Z])/g, " $1").trim(),
-    description: "",
-    category: "Other",
-  };
-
-  return {
-    id: raw.id,
-    name: raw.name,
-    title: meta.title,
-    description: meta.description,
-    category: meta.category,
-    variants: raw.variants as Partial<Record<VariantKey, string>>,
-    language: "solidity" in raw.variants ? "solidity" : "javascript",
-  };
-});
-
-export function getSnippetsByCategory(category: string): Snippet[] {
-  return snippets.filter((s) => s.category === category);
-}

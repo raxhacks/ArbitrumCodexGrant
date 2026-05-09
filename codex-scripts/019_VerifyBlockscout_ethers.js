@@ -2,10 +2,9 @@ const { ethers } = require("ethers");
 const https = require("https");
 const http = require("http");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
 const BLOCKSCOUT_API_URL = "https://arbitrum.blockscout.com/api";
-const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS_HERE";
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0x912CE59144191C1204E64559FE8253a0e49E6548";
 const CONTRACT_NAME = "MyContract";
 const COMPILER_VERSION = "v0.8.19+commit.7dd6d404";
 const OPTIMIZATION_ENABLED = true;
@@ -26,7 +25,6 @@ contract MyContract {
 // Constructor arguments (ABI encoded, leave empty if none)
 const CONSTRUCTOR_ARGS = "";
 
-// ==================== HELPERS ====================
 function httpRequest(url, method, data) {
     return new Promise((resolve, reject) => {
         const parsedUrl = new URL(url);
@@ -90,7 +88,6 @@ function httpGet(url) {
     });
 }
 
-// ==================== MAIN ====================
 async function verifyContract() {
     const provider = new ethers.JsonRpcProvider(RPC_URL);
 
@@ -101,7 +98,7 @@ async function verifyContract() {
         process.exit(1);
     }
 
-    console.log("==================== CONTRACT INFO ====================");
+    console.log("CONTRACT INFO");
     console.log("Address:", CONTRACT_ADDRESS);
     console.log("Contract name:", CONTRACT_NAME);
     console.log("Compiler:", COMPILER_VERSION);
@@ -109,7 +106,7 @@ async function verifyContract() {
     console.log("EVM version:", EVM_VERSION);
 
     // Check if already verified
-    console.log("\n==================== CHECK VERIFICATION STATUS ====================");
+    console.log("\nCHECK VERIFICATION STATUS");
     const checkUrl = `${BLOCKSCOUT_API_URL}?module=contract&action=getabi&address=${CONTRACT_ADDRESS}`;
     const checkResult = await httpGet(checkUrl);
 
@@ -122,7 +119,7 @@ async function verifyContract() {
     console.log("Contract is not verified. Submitting verification...");
 
     // Submit verification
-    console.log("\n==================== SUBMITTING VERIFICATION ====================");
+    console.log("\nSUBMITTING VERIFICATION");
     const verifyData = {
         module: "contract",
         action: "verifysourcecode",
@@ -149,7 +146,7 @@ async function verifyContract() {
         console.log("\nVerification submitted! GUID:", guid);
 
         // Poll for result
-        console.log("\n==================== POLLING FOR RESULT ====================");
+        console.log("\nPOLLING FOR RESULT");
         let attempts = 0;
         const maxAttempts = 30;
 

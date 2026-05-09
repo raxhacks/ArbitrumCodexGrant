@@ -1,11 +1,9 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS_HERE";
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0x912CE59144191C1204E64559FE8253a0e49E6548";
 const SLOT_NUMBER = 0; // Storage slot to read (number or hex string)
 
-// ==================== HELPERS ====================
 function decodeAsAddress(data) {
     return "0x" + data.slice(26);
 }
@@ -38,7 +36,6 @@ function computeArraySlot(web3, arraySlot) {
     return web3.utils.keccak256(encoded);
 }
 
-// ==================== MAIN ====================
 async function readStorageSlot() {
     const web3 = new Web3(RPC_URL);
 
@@ -49,19 +46,19 @@ async function readStorageSlot() {
         process.exit(1);
     }
 
-    console.log("==================== CONTRACT ====================");
+    console.log("CONTRACT");
     console.log("Address:", CONTRACT_ADDRESS);
 
     // Read single slot
     const slotHex = padSlot(SLOT_NUMBER);
     const rawValue = await web3.eth.getStorageAt(CONTRACT_ADDRESS, slotHex);
 
-    console.log("\n==================== STORAGE SLOT ====================");
+    console.log("\nSTORAGE SLOT");
     console.log("Slot:", slotHex);
     console.log("Raw value:", rawValue);
 
     // Decode as different types
-    console.log("\n==================== DECODED VALUES ====================");
+    console.log("\nDECODED VALUES");
     console.log("As uint256:", decodeAsUint256(rawValue).toString());
     console.log("As int256:", BigInt.asIntN(256, decodeAsUint256(rawValue)).toString());
     console.log("As address:", decodeAsAddress(rawValue));
@@ -76,7 +73,7 @@ async function readStorageSlot() {
     }
 
     // Read multiple consecutive slots
-    console.log("\n==================== CONSECUTIVE SLOTS ====================");
+    console.log("\nCONSECUTIVE SLOTS");
     const numSlots = 10;
     const startSlot = BigInt(SLOT_NUMBER);
     const zeroValue = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -94,7 +91,7 @@ async function readStorageSlot() {
     }
 
     // Mapping slot example
-    console.log("\n==================== MAPPING SLOT CALCULATOR ====================");
+    console.log("\nMAPPING SLOT CALCULATOR");
     const exampleKey = 1;
     const exampleMappingSlot = 0;
     const mappingSlot = computeMappingSlot(web3, exampleKey, exampleMappingSlot);
@@ -104,7 +101,7 @@ async function readStorageSlot() {
     console.log("  Value:", mappingValue);
 
     // Array slot example
-    console.log("\n==================== ARRAY SLOT CALCULATOR ====================");
+    console.log("\nARRAY SLOT CALCULATOR");
     const exampleArraySlot = 0;
     const arrayDataSlot = computeArraySlot(web3, exampleArraySlot);
     console.log(`Array at base slot ${exampleArraySlot}:`);

@@ -1,26 +1,22 @@
 const { ethers } = require("ethers");
 
-// ==================== CONFIGURATION ====================
 const CHAIN_ID = 42161; // Change this to check any chain
 
-// ==================== KNOWN RPC ENDPOINTS BY CHAIN ID ====================
 const RPC_BY_CHAIN_ID = {
     42161: "https://arb1.arbitrum.io/rpc",           // Arbitrum One
     42170: "https://nova.arbitrum.io/rpc",            // Arbitrum Nova
     421614: "https://sepolia-rollup.arbitrum.io/rpc", // Arbitrum Sepolia
 };
 
-// ==================== KNOWN EXPRESS LANE AUCTION ADDRESSES BY CHAIN ID ====================
 const AUCTION_BY_CHAIN_ID = {
-    42161: "0x00a0F15B79D1D3E5991929FaAbCf2Aa65623530d",  // Arbitrum One
-    42170: "0x00a0F15B79D1D3E5991929FaAbCf2Aa65623530d",  // Arbitrum Nova (update if different)
-    421614: "0x00a0F15B79D1D3E5991929FaAbCf2Aa65623530d", // Arbitrum Sepolia (update if different)
+    42161: "0x5fcb496a31b7AE91e7c9078Ec662bd7A55cd3079",  // Arbitrum One
+    42170: "0x5fcb496a31b7AE91e7c9078Ec662bd7A55cd3079",  // Arbitrum Nova (update if different)
+    421614: "0x5fcb496a31b7AE91e7c9078Ec662bd7A55cd3079", // Arbitrum Sepolia (update if different)
 };
 
-// ==================== ABI ====================
 const EXPRESS_LANE_AUCTION_ABI = [
     "function currentRound() external view returns (uint64)",
-    "function roundDurationSeconds() external view returns (uint64)",
+    "function roundTimingInfo() external view returns (int64 offsetTimestamp, uint64 roundDurationSeconds, uint64 auctionClosingSeconds, uint64 reserveSubmissionSeconds)",
     "function reservePrice() external view returns (uint256)",
     "function biddingToken() external view returns (address)",
 ];
@@ -30,7 +26,6 @@ const ERC20_ABI = [
     "function decimals() external view returns (uint8)",
 ];
 
-// ==================== MAIN ====================
 async function detectTimeboost() {
     const rpcUrl = RPC_BY_CHAIN_ID[CHAIN_ID];
     if (!rpcUrl) {
@@ -49,7 +44,7 @@ async function detectTimeboost() {
         process.exit(1);
     }
 
-    console.log(`==================== TIMEBOOST DETECTION (Chain ${CHAIN_ID}) ====================`);
+    console.log(`TIMEBOOST DETECTION (Chain ${CHAIN_ID})`);
 
     const auctionAddress = AUCTION_BY_CHAIN_ID[CHAIN_ID];
     if (!auctionAddress) {
@@ -72,12 +67,13 @@ async function detectTimeboost() {
     const auction = new ethers.Contract(auctionAddress, EXPRESS_LANE_AUCTION_ABI, provider);
 
     try {
-        const [currentRound, roundDuration, reservePrice, biddingTokenAddress] = await Promise.all([
+        const [currentRound, timing, reservePrice, biddingTokenAddress] = await Promise.all([
             auction.currentRound(),
-            auction.roundDurationSeconds(),
+            auction.roundTimingInfo(),
             auction.reservePrice(),
             auction.biddingToken(),
         ]);
+        const roundDuration = timing.roundDurationSeconds ?? timing[1];
 
         const biddingToken = new ethers.Contract(biddingTokenAddress, ERC20_ABI, provider);
         const [symbol, decimals] = await Promise.all([

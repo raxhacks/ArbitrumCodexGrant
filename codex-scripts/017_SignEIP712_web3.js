@@ -1,10 +1,12 @@
 const { Web3 } = require("web3");
 const { secp256k1 } = require("ethereum-cryptography/secp256k1");
 
-// ==================== CONFIGURATION ====================
-const PRIVATE_KEY = "YOUR_PRIVATE_KEY_HERE";
+function generatePrivateKey() {
+    const w3 = new Web3();
+    return w3.eth.accounts.create().privateKey;
+}
+const PRIVATE_KEY = process.env.PRIVATE_KEY || generatePrivateKey();
 
-// ==================== EIP-712 TYPED DATA ====================
 const typedData = {
     types: {
         EIP712Domain: [
@@ -37,7 +39,6 @@ const typedData = {
     },
 };
 
-// ==================== HELPERS ====================
 function encodeType(typeName, types) {
     const fields = types[typeName];
     return `${typeName}(${fields.map((f) => `${f.type} ${f.name}`).join(",")})`;
@@ -78,23 +79,22 @@ function hashStruct(web3, typeName, types, data) {
     return web3.utils.keccak256(encoded);
 }
 
-// ==================== MAIN ====================
 async function signEIP712() {
     const web3 = new Web3();
     const account = web3.eth.accounts.privateKeyToAccount(PRIVATE_KEY);
 
-    console.log("==================== SIGNER ====================");
+    console.log("SIGNER");
     console.log("Address:", account.address);
 
     // Display domain
-    console.log("\n==================== EIP-712 DOMAIN ====================");
+    console.log("\nEIP-712 DOMAIN");
     console.log("Name:", typedData.domain.name);
     console.log("Version:", typedData.domain.version);
     console.log("Chain ID:", typedData.domain.chainId);
     console.log("Verifying contract:", typedData.domain.verifyingContract);
 
     // Display types
-    console.log("\n==================== EIP-712 TYPES ====================");
+    console.log("\nEIP-712 TYPES");
     Object.entries(typedData.types).forEach(([typeName, fields]) => {
         if (typeName === "EIP712Domain") return;
         console.log(`${typeName}:`);
@@ -102,7 +102,7 @@ async function signEIP712() {
     });
 
     // Display message
-    console.log("\n==================== EIP-712 MESSAGE ====================");
+    console.log("\nEIP-712 MESSAGE");
     Object.entries(typedData.message).forEach(([key, value]) => {
         let display = value.toString();
         if (key === "amount") display = `${value} (${Web3.utils.fromWei(value, "ether")} ETH)`;
@@ -111,7 +111,7 @@ async function signEIP712() {
     });
 
     // Compute hashes
-    console.log("\n==================== HASHES ====================");
+    console.log("\nHASHES");
     const domainSeparator = hashStruct(web3, "EIP712Domain", typedData.types, typedData.domain);
     console.log("Domain separator:", domainSeparator);
 
@@ -128,7 +128,7 @@ async function signEIP712() {
 
     // Sign the hash using raw ECDSA (no Ethereum message prefix)
     // account.sign() adds "\x19Ethereum Signed Message" prefix which breaks EIP-712
-    console.log("\n==================== SIGNATURE ====================");
+    console.log("\nSIGNATURE");
     const ecSig = secp256k1.sign(fullHash.slice(2), PRIVATE_KEY.slice(2));
     const r = "0x" + ecSig.r.toString(16).padStart(64, "0");
     const s = "0x" + ecSig.s.toString(16).padStart(64, "0");
@@ -140,7 +140,7 @@ async function signEIP712() {
     console.log("s:", s);
 
     // Verify using ecrecover without message prefix (prefixed=true means hash is already final)
-    console.log("\n==================== VERIFICATION ====================");
+    console.log("\nVERIFICATION");
     const recovered = web3.eth.accounts.recover(fullHash, v, r, s, true);
     console.log("Recovered address:", recovered);
     console.log("Valid:", recovered.toLowerCase() === account.address.toLowerCase());

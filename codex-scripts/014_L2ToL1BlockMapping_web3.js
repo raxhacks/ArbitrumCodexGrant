@@ -1,15 +1,12 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
 const L1_RPC_URL = "https://eth.llamarpc.com";
 const L2_RPC_URL = "https://arb1.arbitrum.io/rpc";
 const L2_BLOCK_NUMBER = "latest"; // L2 block number or "latest"
 
-// ==================== CONTRACT ADDRESSES ====================
 const ARB_SYS_ADDRESS = "0x0000000000000000000000000000000000000064";
 const NODE_INTERFACE_ADDRESS = "0x00000000000000000000000000000000000000C8";
 
-// ==================== ABI ====================
 const ARB_SYS_ABI = [
     {
         name: "arbBlockNumber",
@@ -54,7 +51,6 @@ const NODE_INTERFACE_ABI = [
     },
 ];
 
-// ==================== MAIN ====================
 async function getL2ToL1BlockMapping() {
     const l1Web3 = new Web3(L1_RPC_URL);
     const l2Web3 = new Web3(L2_RPC_URL);
@@ -70,7 +66,7 @@ async function getL2ToL1BlockMapping() {
         l2BlockNum = BigInt(L2_BLOCK_NUMBER);
     }
 
-    console.log("==================== L2 BLOCK ====================");
+    console.log("L2 BLOCK");
     console.log("L2 block number:", l2BlockNum.toString());
 
     // Get L2 block details
@@ -85,7 +81,7 @@ async function getL2ToL1BlockMapping() {
     console.log("L2 transactions:", l2Block.transactions.length);
 
     // Get corresponding L1 block number
-    console.log("\n==================== L1 BLOCK MAPPING ====================");
+    console.log("\nL1 BLOCK MAPPING");
     const l1BlockNum = await nodeInterface.methods.blockL1Num(l2BlockNum).call();
     console.log("Corresponding L1 block:", l1BlockNum.toString());
 
@@ -102,7 +98,7 @@ async function getL2ToL1BlockMapping() {
     }
 
     // Get L2 block range for the L1 block
-    console.log("\n==================== L2 RANGE FOR L1 BLOCK ====================");
+    console.log("\nL2 RANGE FOR L1 BLOCK");
     const l2Range = await nodeInterface.methods.l2BlockRangeForL1(l1BlockNum).call();
     console.log("L1 block:", l1BlockNum.toString());
     console.log("First L2 block:", l2Range.firstBlock.toString());
@@ -110,7 +106,7 @@ async function getL2ToL1BlockMapping() {
     console.log("Total L2 blocks in range:", (Number(l2Range.lastBlock) - Number(l2Range.firstBlock) + 1).toString());
 
     // Map surrounding L2 blocks to L1
-    console.log("\n==================== SURROUNDING BLOCKS ====================");
+    console.log("\nSURROUNDING BLOCKS");
     const rangeStart = Number(l2BlockNum) - 5;
     const rangeEnd = Number(l2BlockNum) + 5;
     const start = rangeStart > 0 ? rangeStart : 0;

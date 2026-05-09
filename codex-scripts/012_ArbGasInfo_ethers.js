@@ -1,10 +1,8 @@
 const { ethers } = require("ethers");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
 const ARB_GAS_INFO_ADDRESS = "0x000000000000000000000000000000000000006C";
 
-// ==================== ABI ====================
 const ARB_GAS_INFO_ABI = [
     "function getPricesInWei() external view returns (uint256, uint256, uint256, uint256, uint256, uint256)",
     "function getPricesInArbGas() external view returns (uint256, uint256, uint256)",
@@ -29,7 +27,6 @@ const ARB_GAS_INFO_ABI = [
     "function getL1PricingSurplus() external view returns (int256)",
 ];
 
-// ==================== MAIN ====================
 async function getArbGasInfo() {
     const provider = new ethers.JsonRpcProvider(RPC_URL);
     const gasInfo = new ethers.Contract(ARB_GAS_INFO_ADDRESS, ARB_GAS_INFO_ABI, provider);
@@ -61,18 +58,18 @@ async function getArbGasInfo() {
     const ether = (v) => ethers.formatEther(v);
 
     // L2 Gas Prices
-    console.log("==================== L2 GAS PRICES ====================");
+    console.log("L2 GAS PRICES");
     show("L2 base fee:", l2BaseFee, "gwei", gwei);
     show("Minimum gas price:", minGasPrice, "gwei", gwei);
 
     // L1 Fee Estimates
-    console.log("\n==================== L1 FEE ESTIMATES ====================");
+    console.log("\nL1 FEE ESTIMATES");
     show("L1 base fee estimate:", l1BaseFee, "gwei", gwei);
     show("L1 gas price estimate:", l1GasPrice, "gwei", gwei);
     show("L1 base fee inertia:", l1Inertia);
 
     // Prices in Wei (detailed breakdown)
-    console.log("\n==================== PRICES IN WEI ====================");
+    console.log("\nPRICES IN WEI");
     if (pricesWei) {
         console.log("Per L2 tx:", gwei(pricesWei[0]), "gwei");
         console.log("Per L1 calldata unit:", gwei(pricesWei[1]), "gwei");
@@ -85,7 +82,7 @@ async function getArbGasInfo() {
     }
 
     // Prices in ArbGas
-    console.log("\n==================== PRICES IN ARBGAS ====================");
+    console.log("\nPRICES IN ARBGAS");
     if (pricesArbGas) {
         console.log("Per L2 tx:", pricesArbGas[0].toString());
         console.log("Per L1 calldata unit:", pricesArbGas[1].toString());
@@ -95,7 +92,7 @@ async function getArbGasInfo() {
     }
 
     // Gas Pool
-    console.log("\n==================== GAS POOL ====================");
+    console.log("\nGAS POOL");
     show("Gas backlog:", gasBacklog);
     show("Gas pool seconds:", gasPoolSeconds);
     show("Gas pool target:", gasPoolTarget);
@@ -103,7 +100,7 @@ async function getArbGasInfo() {
     show("Rate estimate:", rateEstimate);
 
     // L1 Pricing
-    console.log("\n==================== L1 PRICING ====================");
+    console.log("\nL1 PRICING");
     show("L1 reward rate:", l1RewardRate);
     show("L1 reward recipient:", l1RewardRecipient);
     show("L1 fees available:", l1FeesAvailable, "ETH", ether);
@@ -118,7 +115,7 @@ async function getArbGasInfo() {
     show("Amortized cost cap (bips):", amortizedCapBips);
 
     // Current tx cost
-    console.log("\n==================== CURRENT TX L1 FEES ====================");
+    console.log("\nCURRENT TX L1 FEES");
     show("Current tx L1 gas fees:", currentTxL1Fees, "gwei", gwei);
 }
 

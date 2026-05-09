@@ -1,14 +1,13 @@
 const { ethers } = require("ethers");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const PRIVATE_KEY_OWNER = "YOUR_OWNER_PRIVATE_KEY_HERE";
-const PRIVATE_KEY_SPENDER = "YOUR_SPENDER_PRIVATE_KEY_HERE";
-const TOKEN_ADDRESS = "YOUR_ERC20_TOKEN_ADDRESS_HERE";
-const RECIPIENT = "YOUR_RECIPIENT_ADDRESS_HERE";
+const PRIVATE_KEY_OWNER = process.env.PRIVATE_KEY_OWNER || ethers.Wallet.createRandom().privateKey;
+const PRIVATE_KEY_SPENDER = process.env.PRIVATE_KEY_SPENDER || ethers.Wallet.createRandom().privateKey;
+const TOKEN_ADDRESS = process.env.TOKEN_ADDRESS || "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1";
+const RECIPIENT = process.env.RECIPIENT || ethers.Wallet.createRandom().address;
 const TRANSFER_AMOUNT = ethers.parseEther("1.0");
+const DRY_RUN = process.env.DRY_RUN !== "false";
 
-// ==================== ABI ====================
 const ERC20_PERMIT_ABI = [
     "function name() external view returns (string)",
     "function symbol() external view returns (string)",
@@ -23,7 +22,6 @@ const ERC20_PERMIT_ABI = [
     "function transfer(address to, uint256 amount) external returns (bool)",
 ];
 
-// ==================== MAIN ====================
 async function permitTransfer() {
     const provider = new ethers.JsonRpcProvider(RPC_URL);
     const owner = new ethers.Wallet(PRIVATE_KEY_OWNER, provider);
@@ -38,14 +36,14 @@ async function permitTransfer() {
     const symbol = await token.symbol();
     const decimals = await token.decimals();
 
-    console.log("==================== TOKEN INFO ====================");
+    console.log("TOKEN INFO");
     console.log("Name:", name);
     console.log("Symbol:", symbol);
     console.log("Decimals:", decimals.toString());
     console.log("Address:", TOKEN_ADDRESS);
     console.log("Chain ID:", chainId);
 
-    console.log("\n==================== ACCOUNTS ====================");
+    console.log("\nACCOUNTS");
     console.log("Owner:", owner.address);
     console.log("Spender:", spender.address);
     console.log("Recipient:", RECIPIENT);
@@ -56,8 +54,8 @@ async function permitTransfer() {
     console.log("\nOwner balance:", ethers.formatUnits(ownerBalance, decimals), symbol);
     console.log("Recipient balance:", ethers.formatUnits(recipientBalance, decimals), symbol);
 
-    // Check sufficient balance
-    if (ownerBalance < TRANSFER_AMOUNT) {
+    // Check sufficient balance (only enforced when actually broadcasting)
+    if (ownerBalance < TRANSFER_AMOUNT && !DRY_RUN) {
         console.log("\nInsufficient owner balance!");
         console.log("Need:", ethers.formatUnits(TRANSFER_AMOUNT, decimals), symbol);
         process.exit(1);
@@ -67,7 +65,7 @@ async function permitTransfer() {
     const nonce = await token.nonces(owner.address);
     const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour
 
-    console.log("\n==================== PERMIT PARAMS ====================");
+    console.log("\nPERMIT PARAMS");
     console.log("Amount:", ethers.formatUnits(TRANSFER_AMOUNT, decimals), symbol);
     console.log("Nonce:", nonce.toString());
     console.log("Deadline:", new Date(deadline * 1000).toISOString());
@@ -99,7 +97,7 @@ async function permitTransfer() {
     };
 
     // Sign permit
-    console.log("\n==================== SIGNING PERMIT ====================");
+    console.log("\nSIGNING PERMIT");
     const signature = await owner.signTypedData(domain, types, message);
     const sig = ethers.Signature.from(signature);
 
@@ -113,8 +111,10 @@ async function permitTransfer() {
     console.log("Recovered signer:", recovered);
     console.log("Valid:", recovered.toLowerCase() === owner.address.toLowerCase());
 
+    if (DRY_RUN) return;
+
     // Submit permit tx (spender calls permit)
-    console.log("\n==================== SUBMITTING PERMIT ====================");
+    console.log("\nSUBMITTING PERMIT");
     const tokenAsSpender = new ethers.Contract(TOKEN_ADDRESS, ERC20_PERMIT_ABI, spender);
     const permitTx = await tokenAsSpender.permit(
         owner.address,
@@ -136,7 +136,7 @@ async function permitTransfer() {
     console.log("Allowance set:", ethers.formatUnits(allowance, decimals), symbol);
 
     // Execute transferFrom (spender transfers from owner to recipient)
-    console.log("\n==================== EXECUTING TRANSFER ====================");
+    console.log("\nEXECUTING TRANSFER");
     const transferTx = await tokenAsSpender.transferFrom(owner.address, RECIPIENT, TRANSFER_AMOUNT);
     console.log("Transfer tx hash:", transferTx.hash);
 
@@ -145,7 +145,7 @@ async function permitTransfer() {
     console.log("Gas used:", transferReceipt.gasUsed.toString());
 
     // Final balances
-    console.log("\n==================== FINAL BALANCES ====================");
+    console.log("\nFINAL BALANCES");
     const ownerBalanceAfter = await token.balanceOf(owner.address);
     const recipientBalanceAfter = await token.balanceOf(RECIPIENT);
     console.log("Owner balance:", ethers.formatUnits(ownerBalanceAfter, decimals), symbol);

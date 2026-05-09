@@ -1,18 +1,15 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
-const L1_RPC_URL = "https://eth.llamarpc.com";
+const L1_RPC_URL = process.env.L1_RPC_URL || "https://ethereum-rpc.publicnode.com";
 const L2_RPC_URL = "https://arb1.arbitrum.io/rpc";
 let FROM_BLOCK = 0;         // L1 block to start from (0 = auto-calculate recent range)
 const TO_BLOCK = "latest";
 const MAX_EVENTS = 100;     // Max events to display
 
-// ==================== CONTRACT ADDRESSES ====================
 const DELAYED_INBOX_ADDRESS = "0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f";
 const SEQUENCER_INBOX_ADDRESS = "0x1c479675ad559DC151F6Ec7ed3FbF8ceE79582B6";
 const BRIDGE_ADDRESS = "0x8315177aB297bA92A06054cE80a67Ed4DBd7ed3a";
 
-// ==================== ABI ====================
 const BRIDGE_ABI = [
     {
         name: "delayedMessageCount",
@@ -170,7 +167,6 @@ const SEQUENCER_INBOX_ABI = [
     },
 ];
 
-// ==================== MESSAGE KINDS ====================
 const MESSAGE_KINDS = {
     0: "L1MessageType_ethDeposit",
     3: "L1MessageType_submitRetryableTx",
@@ -188,14 +184,12 @@ const DATA_LOCATIONS = {
     3: "Blob",
 };
 
-// ==================== MAIN ====================
 async function readL2Inbox() {
     const l1Web3 = new Web3(L1_RPC_URL);
 
-    // Auto-calculate start block if FROM_BLOCK is 0 (L1 RPCs limit log query range)
     if (FROM_BLOCK === 0) {
         const currentBlock = Number(await l1Web3.eth.getBlockNumber());
-        FROM_BLOCK = Math.max(0, currentBlock - 50_000); // ~1 week of L1 blocks
+        FROM_BLOCK = Math.max(0, currentBlock - 200);
     }
 
     const bridge = new l1Web3.eth.Contract(BRIDGE_ABI, BRIDGE_ADDRESS);
@@ -205,7 +199,7 @@ async function readL2Inbox() {
     const fmtGwei = (val) => Web3.utils.fromWei(val.toString(), "gwei");
 
     // Inbox state
-    console.log("==================== INBOX STATE ====================");
+    console.log("INBOX STATE");
     const delayedCount = await bridge.methods.delayedMessageCount().call();
     const sequencerCount = await bridge.methods.sequencerMessageCount().call();
     const batchCount = await sequencerInbox.methods.batchCount().call();
@@ -218,14 +212,14 @@ async function readL2Inbox() {
     console.log("Delayed messages read by sequencer:", delayedRead.toString());
     console.log("Unread delayed messages:", (BigInt(delayedCount) - BigInt(delayedRead)).toString());
 
-    console.log("\n==================== TIME VARIATION ====================");
+    console.log("\nTIME VARIATION");
     console.log("Delay blocks:", timeVariation.delayBlocks.toString());
     console.log("Future blocks:", timeVariation.futureBlocks.toString());
     console.log("Delay seconds:", timeVariation.delaySeconds.toString());
     console.log("Future seconds:", timeVariation.futureSeconds.toString());
 
     // Delayed inbox config
-    console.log("\n==================== DELAYED INBOX CONFIG ====================");
+    console.log("\nDELAYED INBOX CONFIG");
     const bridgeAddr = await delayedInbox.methods.bridge().call();
     const seqInboxAddr = await delayedInbox.methods.sequencerInbox().call();
 
@@ -247,7 +241,7 @@ async function readL2Inbox() {
     }
 
     // Recent delayed messages
-    console.log("\n==================== RECENT DELAYED MESSAGES ====================");
+    console.log("\nRECENT DELAYED MESSAGES");
     const msgEvents = await bridge.getPastEvents("MessageDelivered", { fromBlock: FROM_BLOCK, toBlock: TO_BLOCK });
     const recentMsgs = msgEvents.slice(-MAX_EVENTS);
 
@@ -272,7 +266,7 @@ async function readL2Inbox() {
     });
 
     // Recent sequencer batches
-    console.log("==================== RECENT SEQUENCER BATCHES ====================");
+    console.log("RECENT SEQUENCER BATCHES");
     const batchEvents = await sequencerInbox.getPastEvents("SequencerBatchDelivered", { fromBlock: FROM_BLOCK, toBlock: TO_BLOCK });
     const recentBatches = batchEvents.slice(-MAX_EVENTS);
 
@@ -301,7 +295,7 @@ async function readL2Inbox() {
     });
 
     // Summary
-    console.log("==================== SUMMARY ====================");
+    console.log("SUMMARY");
     console.log("Delayed inbox:", DELAYED_INBOX_ADDRESS);
     console.log("Sequencer inbox:", SEQUENCER_INBOX_ADDRESS);
     console.log("Bridge:", BRIDGE_ADDRESS);

@@ -25,8 +25,18 @@ ArbitrumCodexGrant/
 ├── codex-frontend/       # Next.js frontend application
 │   ├── app/              # App Router pages & layout
 │   ├── components/       # React components (SnippetCard, CodeBlock)
-│   ├── lib/              # Snippet data & utilities
+│   ├── lib/              # API client & React hooks
 │   └── public/           # Static assets (logo)
+├── codex-backend/        # Express + TypeScript API
+│   ├── src/
+│   │   ├── routes/       # /api/snippets, /api/run, /api/categories
+│   │   ├── sandbox/      # Worker-thread snippet executor
+│   │   ├── snippets/     # Registry & category metadata
+│   │   ├── config.ts     # Zod-validated env config
+│   │   ├── logger.ts     # pino logger
+│   │   └── server.ts     # Express entry point
+│   ├── scripts/          # Build helpers (snippet sync, etc.)
+│   └── tests/            # Vitest suite (executor, registry, routes)
 ├── codex-scripts/        # Production-ready code templates
 │   ├── 001-029 ethers.js # ethers.js implementations
 │   ├── 001-029 web3.js   # web3.js implementations
@@ -36,17 +46,42 @@ ArbitrumCodexGrant/
 
 ## Getting Started
 
+For the live testing flow, start the backend first, then the frontend.
+
+### Backend
+
+```bash
+cd codex-backend
+npm install
+cp .env.example .env       # adjust PORT, CORS_ORIGIN, RPC URLs as needed
+npm run dev                # http://localhost:3001
+```
+
+Available scripts:
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start the API in watch mode (`tsx watch`) |
+| `npm run build` | Type-check and emit to `dist/` |
+| `npm start` | Run the compiled server |
+| `npm test` | Run the Vitest suite |
+| `npm run check` | Type-check only |
+
 ### Frontend
 
 ```bash
 cd codex-frontend
 npm install
+# Optional: point at a non-default backend
+# echo "NEXT_PUBLIC_API_URL=http://localhost:3001" > .env.local
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view the platform.
 
 ### Scripts
+
+The standalone snippets in `codex-scripts/` can also be run directly without the backend:
 
 ```bash
 cd codex-scripts
@@ -96,8 +131,8 @@ All snippets are available in both **ethers.js** and **web3.js** versions.
 |-----------|-------------|--------|
 | 1 | Code Snippet Library & Testing Infrastructure | Completed |
 | 2 | Frontend Development | Completed |
-| 3 | Backend Development | Pending |
-| 4 | Fullstack Integration | Pending |
+| 3 | Backend Development | Completed |
+| 4 | Fullstack Integration | Completed |
 | 5 | Documentation & Grant Reporting | Pending |
 
 ### Milestone 1: Code Snippet Library & Testing Infrastructure
@@ -107,3 +142,11 @@ Complete GitHub repository with production-ready code templates for Arbitrum-spe
 ### Milestone 2: Frontend Development
 
 Fully functional user interface with intuitive navigation, code discovery interface, one-click code copying, and integration points for live testing environments. Developer-centric UX/UI implementation with tags, searchbar, and improved logo.
+
+### Milestone 3: Backend Development
+
+Production-ready backend service powering snippet discovery and live in-browser code execution. RESTful API built with Express and TypeScript, exposing endpoints for snippet listing, single-snippet retrieval, category browsing, on-demand sandboxed execution, and health checks. Each snippet runs inside an isolated Node.js worker thread with hard timeout and memory limits, OOM detection, scrubbed environment variables, and captured console output. Hardened with Helmet, CORS allowlists, Zod-based request validation, per-route rate limiting, structured logging via pino, and comprehensive Vitest coverage across executor, registry, and HTTP routes.
+
+### Milestone 4: Fullstack Integration
+
+Fully integrated fullstack pipeline connecting the frontend interface to the backend API and execution sandbox. Snippets and categories are now fetched dynamically at runtime through a typed API client and a dedicated React hook with abort handling, loading state, and graceful error reporting. Each snippet card exposes a one-click Run action that executes the selected ethers.js or web3.js variant against the backend and renders the resulting logs and outputs directly in the browser, with developer-friendly handling for rate limits, missing variants, and timeouts.

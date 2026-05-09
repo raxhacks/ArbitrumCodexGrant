@@ -1,10 +1,8 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const CACHE_MANAGER_ADDRESS = "0xd1bBD579B127Fc8eD1cF40E8bbcf2EFBc07787AD";
+const CACHE_MANAGER_ADDRESS = "0x51dEDBD2f190E0696AFbEE5E60bFdE96d86464ec";
 
-// ==================== ABI ====================
 const CACHE_MANAGER_ABI = [
     {
         name: "getEntries",
@@ -53,7 +51,6 @@ const CACHE_MANAGER_ABI = [
     },
 ];
 
-// ==================== MAIN ====================
 async function readCache() {
     const web3 = new Web3(RPC_URL);
     const cacheManager = new web3.eth.Contract(CACHE_MANAGER_ABI, CACHE_MANAGER_ADDRESS);
@@ -61,7 +58,7 @@ async function readCache() {
     // Get cache stats
     const cacheSize = await cacheManager.methods.cacheSize().call();
     const queueSize = await cacheManager.methods.queueSize().call();
-    console.log("==================== CACHE STATS ====================");
+    console.log("CACHE STATS");
     console.log("Cache size:", cacheSize.toString(), "bytes");
     console.log("Queue size:", queueSize.toString());
 
@@ -71,7 +68,7 @@ async function readCache() {
     console.log("");
 
     // Display all cached contracts
-    console.log("==================== CACHED CONTRACTS ====================");
+    console.log("CACHED CONTRACTS");
     entries.forEach((entry, index) => {
         console.log(`\n--- Entry ${index + 1} ---`);
         console.log("Codehash:", entry.code);

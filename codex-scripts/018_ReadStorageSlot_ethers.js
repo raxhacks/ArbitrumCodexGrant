@@ -1,11 +1,9 @@
 const { ethers } = require("ethers");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS_HERE";
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0x912CE59144191C1204E64559FE8253a0e49E6548";
 const SLOT_NUMBER = 0; // Storage slot to read (number or hex string)
 
-// ==================== HELPERS ====================
 function decodeAsAddress(data) {
     return "0x" + data.slice(26);
 }
@@ -36,7 +34,6 @@ function computeArraySlot(arraySlot) {
     );
 }
 
-// ==================== MAIN ====================
 async function readStorageSlot() {
     const provider = new ethers.JsonRpcProvider(RPC_URL);
 
@@ -47,19 +44,19 @@ async function readStorageSlot() {
         process.exit(1);
     }
 
-    console.log("==================== CONTRACT ====================");
+    console.log("CONTRACT");
     console.log("Address:", CONTRACT_ADDRESS);
 
     // Read single slot
     const slotHex = typeof SLOT_NUMBER === "string" ? SLOT_NUMBER : ethers.toBeHex(SLOT_NUMBER, 32);
     const rawValue = await provider.getStorage(CONTRACT_ADDRESS, slotHex);
 
-    console.log("\n==================== STORAGE SLOT ====================");
+    console.log("\nSTORAGE SLOT");
     console.log("Slot:", slotHex);
     console.log("Raw value:", rawValue);
 
     // Decode as different types
-    console.log("\n==================== DECODED VALUES ====================");
+    console.log("\nDECODED VALUES");
     console.log("As uint256:", decodeAsUint256(rawValue).toString());
     console.log("As int256:", BigInt.asIntN(256, decodeAsUint256(rawValue)).toString());
     console.log("As address:", decodeAsAddress(rawValue));
@@ -74,7 +71,7 @@ async function readStorageSlot() {
     }
 
     // Read multiple consecutive slots
-    console.log("\n==================== CONSECUTIVE SLOTS ====================");
+    console.log("\nCONSECUTIVE SLOTS");
     const numSlots = 10;
     const startSlot = BigInt(SLOT_NUMBER);
 
@@ -91,7 +88,7 @@ async function readStorageSlot() {
     }
 
     // Mapping slot example
-    console.log("\n==================== MAPPING SLOT CALCULATOR ====================");
+    console.log("\nMAPPING SLOT CALCULATOR");
     const exampleKey = 1;
     const exampleMappingSlot = 0;
     const mappingSlot = computeMappingSlot(exampleKey, exampleMappingSlot);
@@ -101,7 +98,7 @@ async function readStorageSlot() {
     console.log("  Value:", mappingValue);
 
     // Array slot example
-    console.log("\n==================== ARRAY SLOT CALCULATOR ====================");
+    console.log("\nARRAY SLOT CALCULATOR");
     const exampleArraySlot = 0;
     const arrayDataSlot = computeArraySlot(exampleArraySlot);
     console.log(`Array at base slot ${exampleArraySlot}:`);

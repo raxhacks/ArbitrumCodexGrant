@@ -1,10 +1,8 @@
 const { ethers } = require("ethers");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS_HERE";
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0x912CE59144191C1204E64559FE8253a0e49E6548";
 
-// ==================== ABI ====================
 // Replace with your contract's ABI (view/pure functions you want to read)
 const CONTRACT_ABI = [
     "function name() external view returns (string)",
@@ -18,7 +16,6 @@ const CONTRACT_ABI = [
     "function get() external view returns (uint256)",
 ];
 
-// ==================== FUNCTIONS TO CALL ====================
 // Each entry: { name: "functionName", args: [arg1, arg2, ...] }
 const CALLS = [
     { name: "name", args: [] },
@@ -30,7 +27,6 @@ const CALLS = [
     // { name: "allowance", args: ["0xOwner", "0xSpender"] },
 ];
 
-// ==================== MAIN ====================
 async function readContract() {
     const provider = new ethers.JsonRpcProvider(RPC_URL);
 
@@ -44,12 +40,12 @@ async function readContract() {
     const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
     const iface = new ethers.Interface(CONTRACT_ABI);
 
-    console.log("==================== CONTRACT ====================");
+    console.log("CONTRACT");
     console.log("Address:", CONTRACT_ADDRESS);
     console.log("Bytecode size:", (code.length - 2) / 2, "bytes");
 
     // List available view functions
-    console.log("\n==================== AVAILABLE FUNCTIONS ====================");
+    console.log("\nAVAILABLE FUNCTIONS");
     iface.fragments.forEach((fragment) => {
         if (fragment.type === "function" && (fragment.stateMutability === "view" || fragment.stateMutability === "pure")) {
             const inputs = fragment.inputs.map((i) => `${i.type} ${i.name}`).join(", ");
@@ -59,7 +55,7 @@ async function readContract() {
     });
 
     // Execute calls
-    console.log("\n==================== RESULTS ====================");
+    console.log("\nRESULTS");
 
     for (const call of CALLS) {
         const { name, args } = call;
@@ -111,7 +107,7 @@ async function readContract() {
     }
 
     // Batch read using multicall-style
-    console.log("\n==================== BATCH READ (Promise.allSettled) ====================");
+    console.log("\nBATCH READ (Promise.allSettled)");
     const batchCalls = CALLS.map(({ name, args }) =>
         contract[name](...args)
             .then((result) => ({ name, args, result, status: "fulfilled" }))

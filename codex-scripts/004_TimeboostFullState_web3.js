@@ -1,273 +1,124 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const EXPRESS_LANE_AUCTION_ADDRESS = "0x00a0F15B79D1D3E5991929FaAbCf2Aa65623530d";
-
-// ==================== ABI ====================
-const EXPRESS_LANE_AUCTION_ABI = [
-    {
-        name: "currentRound",
-        type: "function",
-        stateMutability: "view",
-        inputs: [],
-        outputs: [{ name: "", type: "uint64" }],
-    },
-    {
-        name: "roundDurationSeconds",
-        type: "function",
-        stateMutability: "view",
-        inputs: [],
-        outputs: [{ name: "", type: "uint64" }],
-    },
-    {
-        name: "reservePrice",
-        type: "function",
-        stateMutability: "view",
-        inputs: [],
-        outputs: [{ name: "", type: "uint256" }],
-    },
-    {
-        name: "minReservePrice",
-        type: "function",
-        stateMutability: "view",
-        inputs: [],
-        outputs: [{ name: "", type: "uint256" }],
-    },
-    {
-        name: "beneficiary",
-        type: "function",
-        stateMutability: "view",
-        inputs: [],
-        outputs: [{ name: "", type: "address" }],
-    },
-    {
-        name: "beneficiaryBalance",
-        type: "function",
-        stateMutability: "view",
-        inputs: [],
-        outputs: [{ name: "", type: "uint256" }],
-    },
-    {
-        name: "biddingToken",
-        type: "function",
-        stateMutability: "view",
-        inputs: [],
-        outputs: [{ name: "", type: "address" }],
-    },
-    {
-        name: "auctioneer",
-        type: "function",
-        stateMutability: "view",
-        inputs: [],
-        outputs: [{ name: "", type: "address" }],
-    },
-    {
-        name: "expressLaneControllerByRound",
-        type: "function",
-        stateMutability: "view",
-        inputs: [{ name: "round", type: "uint64" }],
-        outputs: [{ name: "", type: "address" }],
-    },
-    {
-        name: "roundTimestamps",
-        type: "function",
-        stateMutability: "view",
-        inputs: [{ name: "round", type: "uint64" }],
-        outputs: [
-            { name: "start", type: "uint64" },
-            { name: "end", type: "uint64" },
-        ],
-    },
-    {
-        name: "AuctionResolved",
-        type: "event",
-        inputs: [
-            { name: "round", type: "uint64", indexed: true },
-            { name: "firstPriceBidder", type: "address", indexed: true },
-            { name: "expressLaneController", type: "address", indexed: true },
-            { name: "price", type: "uint256", indexed: false },
-        ],
-    },
-    {
-        name: "SetReservePrice",
-        type: "event",
-        inputs: [
-            { name: "oldReservePrice", type: "uint256", indexed: false },
-            { name: "newReservePrice", type: "uint256", indexed: false },
-        ],
-    },
-    {
-        name: "SetMinReservePrice",
-        type: "event",
-        inputs: [
-            { name: "oldPrice", type: "uint256", indexed: false },
-            { name: "newPrice", type: "uint256", indexed: false },
-        ],
-    },
-    {
-        name: "SetBeneficiary",
-        type: "event",
-        inputs: [
-            { name: "oldBeneficiary", type: "address", indexed: false },
-            { name: "newBeneficiary", type: "address", indexed: false },
-        ],
-    },
-    {
-        name: "Deposit",
-        type: "event",
-        inputs: [
-            { name: "sender", type: "address", indexed: true },
-            { name: "amount", type: "uint256", indexed: false },
-        ],
-    },
-    {
-        name: "WithdrawalInitiated",
-        type: "event",
-        inputs: [
-            { name: "sender", type: "address", indexed: true },
-            { name: "amount", type: "uint256", indexed: false },
-        ],
-    },
-    {
-        name: "WithdrawalFinalized",
-        type: "event",
-        inputs: [
-            { name: "sender", type: "address", indexed: true },
-            { name: "amount", type: "uint256", indexed: false },
-        ],
-    },
-];
+const CHAIN_ID = 42161;
+const EXPRESS_LANE_AUCTION_ADDRESS = "0x5fcb496a31b7AE91e7c9078Ec662bd7A55cd3079";
 
 const ERC20_ABI = [
-    {
-        name: "symbol",
-        type: "function",
-        stateMutability: "view",
-        inputs: [],
-        outputs: [{ name: "", type: "string" }],
-    },
-    {
-        name: "decimals",
-        type: "function",
-        stateMutability: "view",
-        inputs: [],
-        outputs: [{ name: "", type: "uint8" }],
-    },
+    { name: "symbol", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "string" }] },
+    { name: "decimals", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint8" }] },
 ];
 
-// ==================== MAIN ====================
+const FALLBACK_ABI = [
+    { name: "currentRound", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint64" }] },
+    { name: "biddingToken", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "address" }] },
+    { name: "resolvedRounds", type: "function", stateMutability: "view", inputs: [], outputs: [
+        { name: "", type: "tuple", components: [
+            { name: "expressLaneController", type: "address" },
+            { name: "round", type: "uint64" },
+        ]},
+        { name: "", type: "tuple", components: [
+            { name: "expressLaneController", type: "address" },
+            { name: "round", type: "uint64" },
+        ]},
+    ]},
+    { type: "event", name: "AuctionResolved", anonymous: false, inputs: [
+        { indexed: true, name: "isMultiBidAuction", type: "bool" },
+        { indexed: false, name: "round", type: "uint64" },
+        { indexed: true, name: "firstPriceBidder", type: "address" },
+        { indexed: true, name: "firstPriceExpressLaneController", type: "address" },
+        { indexed: false, name: "firstPriceAmount", type: "uint256" },
+        { indexed: false, name: "price", type: "uint256" },
+        { indexed: false, name: "roundStartTimestamp", type: "uint64" },
+        { indexed: false, name: "roundEndTimestamp", type: "uint64" },
+    ]},
+    { type: "event", name: "SetReservePrice", anonymous: false, inputs: [
+        { indexed: false, name: "oldReservePrice", type: "uint256" },
+        { indexed: false, name: "newReservePrice", type: "uint256" },
+    ]},
+    { type: "event", name: "Deposit", anonymous: false, inputs: [
+        { indexed: true, name: "account", type: "address" },
+        { indexed: false, name: "amount", type: "uint256" },
+    ]},
+];
+
+async function loadAbi(web3, chainId, address, fallback) {
+    try {
+        const slot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+        const raw = await web3.eth.getStorageAt(address, slot);
+        const impl = raw && raw !== "0x" ? "0x" + raw.toString().slice(-40) : null;
+        const target = impl && impl !== "0x0000000000000000000000000000000000000000" ? impl : address;
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 5000);
+        const res = await fetch(`https://sourcify.dev/server/files/any/${chainId}/${target}`, { signal: ctrl.signal });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error(`Sourcify ${res.status}`);
+        const body = await res.json();
+        const meta = body.files?.find((f) => f.name === "metadata.json");
+        if (!meta) throw new Error("metadata.json missing");
+        return JSON.parse(meta.content).output.abi;
+    } catch (err) {
+        return fallback;
+    }
+}
+
 async function getTimeboostFullState() {
     const web3 = new Web3(RPC_URL);
-    const auction = new web3.eth.Contract(EXPRESS_LANE_AUCTION_ABI, EXPRESS_LANE_AUCTION_ADDRESS);
+    const abi = await loadAbi(web3, CHAIN_ID, EXPRESS_LANE_AUCTION_ADDRESS, FALLBACK_ABI);
+    const auction = new web3.eth.Contract(abi, EXPRESS_LANE_AUCTION_ADDRESS);
 
-    // Fetch bidding token info for proper formatting
     const biddingTokenAddress = await auction.methods.biddingToken().call();
-    const biddingToken = new web3.eth.Contract(ERC20_ABI, biddingTokenAddress);
-    const symbol = await biddingToken.methods.symbol().call();
-    const tokenDecimals = Number(await biddingToken.methods.decimals().call());
-
+    const tokenContract = new web3.eth.Contract(ERC20_ABI, biddingTokenAddress);
+    const symbol = await tokenContract.methods.symbol().call();
+    const decimals = Number(await tokenContract.methods.decimals().call());
     const fmt = (val) => {
-        const str = val.toString().padStart(tokenDecimals + 1, "0");
-        const whole = str.slice(0, str.length - tokenDecimals) || "0";
-        const frac = str.slice(str.length - tokenDecimals).replace(/0+$/, "");
-        return frac ? `${whole}.${frac}` : whole;
+        const s = val.toString().padStart(decimals + 1, "0");
+        const w = s.slice(0, s.length - decimals) || "0";
+        const f = s.slice(s.length - decimals).replace(/0+$/, "");
+        return f ? `${w}.${f}` : w;
     };
 
-    // Use a recent block range (public RPCs limit log query range)
     const currentBlock = Number(await web3.eth.getBlockNumber());
     const fromBlock = Math.max(0, currentBlock - 1_000_000);
 
-    // ---- Auction Resolved Events ----
-    console.log("\n==================== AUCTION HISTORY ====================");
+    console.log("\nAUCTION HISTORY");
     console.log(`Querying from block ${fromBlock} to latest...`);
-    const resolvedEvents = await auction.getPastEvents("AuctionResolved", { fromBlock: fromBlock, toBlock: "latest" });
+    const resolvedEvents = await auction.getPastEvents("AuctionResolved", { fromBlock, toBlock: "latest" });
     console.log("Total auctions resolved:", resolvedEvents.length);
 
-    resolvedEvents.forEach((event) => {
-        const { round, firstPriceBidder, expressLaneController, price } = event.returnValues;
-        console.log(`\n--- Round ${round.toString()} ---`);
-        console.log("First price bidder:", firstPriceBidder);
-        console.log("Express lane controller:", expressLaneController);
-        console.log("Price:", fmt(price), symbol);
-        console.log("Block:", event.blockNumber.toString());
-        console.log("Tx:", event.transactionHash);
+    resolvedEvents.slice(0, 10).forEach((event) => {
+        const a = event.returnValues;
+        console.log(`\n--- Round ${a.round.toString()} ---`);
+        console.log("Multi-bid auction:", a.isMultiBidAuction);
+        console.log("First price bidder:", a.firstPriceBidder);
+        console.log("Express lane controller:", a.firstPriceExpressLaneController);
+        console.log("Winning bid:", fmt(a.firstPriceAmount), symbol);
+        console.log("Settled price:", fmt(a.price), symbol);
     });
+    if (resolvedEvents.length > 10) console.log(`(... ${resolvedEvents.length - 10} more rounds in history)`);
 
-    // ---- Reserve Price Changes ----
-    console.log("\n==================== RESERVE PRICE HISTORY ====================");
-    const reserveEvents = await auction.getPastEvents("SetReservePrice", { fromBlock: fromBlock, toBlock: "latest" });
+    console.log("\nRESERVE PRICE HISTORY");
+    const reserveEvents = await auction.getPastEvents("SetReservePrice", { fromBlock, toBlock: "latest" });
     console.log("Total reserve price changes:", reserveEvents.length);
-
-    reserveEvents.forEach((event) => {
-        const { oldReservePrice: oldP, newReservePrice: newP } = event.returnValues;
-        console.log(`\n  Old: ${fmt(oldP)} ${symbol} -> New: ${fmt(newP)} ${symbol} (block ${event.blockNumber.toString()})`);
+    reserveEvents.forEach((e) => {
+        console.log(`  ${fmt(e.returnValues.oldReservePrice)} -> ${fmt(e.returnValues.newReservePrice)} ${symbol} (block ${e.blockNumber})`);
     });
 
-    // ---- Min Reserve Price Changes ----
-    console.log("\n==================== MIN RESERVE PRICE HISTORY ====================");
-    const minReserveEvents = await auction.getPastEvents("SetMinReservePrice", { fromBlock: fromBlock, toBlock: "latest" });
-    console.log("Total min reserve price changes:", minReserveEvents.length);
-
-    minReserveEvents.forEach((event) => {
-        const { oldPrice, newPrice } = event.returnValues;
-        console.log(`\n  Old: ${fmt(oldPrice)} ${symbol} -> New: ${fmt(newPrice)} ${symbol} (block ${event.blockNumber.toString()})`);
-    });
-
-    // ---- Beneficiary Changes ----
-    console.log("\n==================== BENEFICIARY HISTORY ====================");
-    const beneficiaryEvents = await auction.getPastEvents("SetBeneficiary", { fromBlock: fromBlock, toBlock: "latest" });
-    console.log("Total beneficiary changes:", beneficiaryEvents.length);
-
-    beneficiaryEvents.forEach((event) => {
-        const { oldBeneficiary: oldB, newBeneficiary: newB } = event.returnValues;
-        console.log(`\n  Old: ${oldB} -> New: ${newB} (block ${event.blockNumber.toString()})`);
-    });
-
-    // ---- Deposit History ----
-    console.log("\n==================== DEPOSIT HISTORY ====================");
-    const depositEvents = await auction.getPastEvents("Deposit", { fromBlock: fromBlock, toBlock: "latest" });
+    console.log("\nDEPOSIT HISTORY");
+    const depositEvents = await auction.getPastEvents("Deposit", { fromBlock, toBlock: "latest" });
     console.log("Total deposits:", depositEvents.length);
-
-    depositEvents.forEach((event) => {
-        const { sender, amount } = event.returnValues;
-        console.log(`  Sender: ${sender} | Amount: ${fmt(amount)} ${symbol} (block ${event.blockNumber.toString()})`);
+    depositEvents.slice(0, 10).forEach((e) => {
+        console.log(`  ${e.returnValues.account} | ${fmt(e.returnValues.amount)} ${symbol} (block ${e.blockNumber})`);
     });
 
-    // ---- Withdrawal History ----
-    console.log("\n==================== WITHDRAWAL HISTORY ====================");
-    const withdrawInitEvents = await auction.getPastEvents("WithdrawalInitiated", { fromBlock: fromBlock, toBlock: "latest" });
-    console.log("Total withdrawals initiated:", withdrawInitEvents.length);
-
-    withdrawInitEvents.forEach((event) => {
-        const { sender, amount } = event.returnValues;
-        console.log(`  Sender: ${sender} | Amount: ${fmt(amount)} ${symbol} (block ${event.blockNumber.toString()})`);
-    });
-
-    const withdrawFinalEvents = await auction.getPastEvents("WithdrawalFinalized", { fromBlock: fromBlock, toBlock: "latest" });
-    console.log("Total withdrawals finalized:", withdrawFinalEvents.length);
-
-    withdrawFinalEvents.forEach((event) => {
-        const { sender, amount } = event.returnValues;
-        console.log(`  Sender: ${sender} | Amount: ${fmt(amount)} ${symbol} (block ${event.blockNumber.toString()})`);
-    });
-
-    // ---- Express Lane Controllers Per Round (from resolved events) ----
-    console.log("\n==================== EXPRESS LANE CONTROLLERS ====================");
+    console.log("\nEXPRESS LANE CONTROLLERS (RECENT)");
     const currentRound = await auction.methods.currentRound().call();
     console.log("Current round:", currentRound.toString());
-
-    // Use resolved events instead of querying every round individually
-    resolvedEvents.forEach((event) => {
-        const { round, expressLaneController } = event.returnValues;
-        console.log(`  Round ${round.toString()}: ${expressLaneController}`);
-    });
-
-    // Also check the current round's controller
-    const currentController = await auction.methods.expressLaneControllerByRound(currentRound).call();
-    if (currentController !== "0x0000000000000000000000000000000000000000") {
-        console.log(`  Round ${currentRound.toString()} (current): ${currentController}`);
-    }
+    const recent = await auction.methods.resolvedRounds().call();
+    const r1 = recent[0] ?? recent.round1;
+    const r2 = recent[1] ?? recent.round2;
+    console.log(`  Round ${(r1.round ?? r1[1]).toString()}: ${r1.expressLaneController ?? r1[0]}`);
+    console.log(`  Round ${(r2.round ?? r2[1]).toString()}: ${r2.expressLaneController ?? r2[0]}`);
 }
 
 getTimeboostFullState().catch((err) => {

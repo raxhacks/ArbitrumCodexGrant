@@ -1,13 +1,12 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const EXPRESS_LANE_AUCTION_ADDRESS = "0x00a0F15B79D1D3E5991929FaAbCf2Aa65623530d";
+const CHAIN_ID = 42161;
+const EXPRESS_LANE_AUCTION_ADDRESS = "0x5fcb496a31b7AE91e7c9078Ec662bd7A55cd3079";
 const HISTORY_ROUNDS = 100; // Number of past rounds to analyze
 const WIN_PROBABILITY_TARGET = 0.8; // 80% win probability target
 
-// ==================== ABI ====================
-const EXPRESS_LANE_AUCTION_ABI = [
+const FALLBACK_ABI = [
     {
         name: "currentRound",
         type: "function",
@@ -21,6 +20,18 @@ const EXPRESS_LANE_AUCTION_ABI = [
         stateMutability: "view",
         inputs: [],
         outputs: [{ name: "", type: "uint256" }],
+    },
+    {
+        name: "roundTimingInfo",
+        type: "function",
+        stateMutability: "view",
+        inputs: [],
+        outputs: [
+            { name: "offsetTimestamp", type: "int64" },
+            { name: "roundDurationSeconds", type: "uint64" },
+            { name: "auctionClosingSeconds", type: "uint64" },
+            { name: "reserveSubmissionSeconds", type: "uint64" },
+        ],
     },
     {
         name: "minReservePrice",
@@ -46,14 +57,39 @@ const EXPRESS_LANE_AUCTION_ABI = [
     {
         name: "AuctionResolved",
         type: "event",
+        anonymous: false,
         inputs: [
-            { name: "round", type: "uint64", indexed: true },
+            { name: "isMultiBidAuction", type: "bool", indexed: true },
+            { name: "round", type: "uint64", indexed: false },
             { name: "firstPriceBidder", type: "address", indexed: true },
-            { name: "expressLaneController", type: "address", indexed: true },
+            { name: "firstPriceExpressLaneController", type: "address", indexed: true },
+            { name: "firstPriceAmount", type: "uint256", indexed: false },
             { name: "price", type: "uint256", indexed: false },
+            { name: "roundStartTimestamp", type: "uint64", indexed: false },
+            { name: "roundEndTimestamp", type: "uint64", indexed: false },
         ],
     },
 ];
+
+async function loadAbi(web3, chainId, address, fallback) {
+    try {
+        const slot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+        const raw = await web3.eth.getStorageAt(address, slot);
+        const impl = raw && raw !== "0x" ? "0x" + raw.toString().slice(-40) : null;
+        const target = impl && impl !== "0x0000000000000000000000000000000000000000" ? impl : address;
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 5000);
+        const res = await fetch(`https://sourcify.dev/server/files/any/${chainId}/${target}`, { signal: ctrl.signal });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error(`Sourcify ${res.status}`);
+        const body = await res.json();
+        const meta = body.files?.find((f) => f.name === "metadata.json");
+        if (!meta) throw new Error("metadata.json missing");
+        return JSON.parse(meta.content).output.abi;
+    } catch (err) {
+        return fallback;
+    }
+}
 
 const ERC20_ABI = [
     {
@@ -72,7 +108,6 @@ const ERC20_ABI = [
     },
 ];
 
-// ==================== ANALYSIS ====================
 function analyzeHistory(prices) {
     if (prices.length === 0) return null;
 
@@ -201,15 +236,16 @@ function calculateOptimalBids(analysis, reservePrice) {
     return strategies;
 }
 
-// ==================== MAIN ====================
 async function calculateOptimalTimeboostBid() {
     const web3 = new Web3(RPC_URL);
-    const auction = new web3.eth.Contract(EXPRESS_LANE_AUCTION_ABI, EXPRESS_LANE_AUCTION_ADDRESS);
+    const abi = await loadAbi(web3, CHAIN_ID, EXPRESS_LANE_AUCTION_ADDRESS, FALLBACK_ABI);
+    const auction = new web3.eth.Contract(abi, EXPRESS_LANE_AUCTION_ADDRESS);
 
     const currentRound = await auction.methods.currentRound().call();
     const reservePrice = await auction.methods.reservePrice().call();
     const minReservePrice = await auction.methods.minReservePrice().call();
-    const roundDuration = await auction.methods.roundDurationSeconds().call();
+    const timing = await auction.methods.roundTimingInfo().call();
+    const roundDuration = timing.roundDurationSeconds ?? timing[1];
     const biddingTokenAddress = await auction.methods.biddingToken().call();
 
     const biddingToken = new web3.eth.Contract(ERC20_ABI, biddingTokenAddress);
@@ -223,7 +259,7 @@ async function calculateOptimalTimeboostBid() {
         return frac ? `${whole}.${frac}` : whole;
     };
 
-    console.log("==================== AUCTION INFO ====================");
+    console.log("AUCTION INFO");
     console.log("Current round:", currentRound.toString());
     console.log("Bidding token:", biddingTokenAddress, `(${symbol})`);
     console.log("Reserve price:", fmt(reservePrice), symbol);
@@ -231,7 +267,7 @@ async function calculateOptimalTimeboostBid() {
     console.log("Round duration:", roundDuration.toString(), "seconds");
 
     // Fetch historical auction data
-    console.log(`\n==================== FETCHING HISTORY (last ${HISTORY_ROUNDS} rounds) ====================`);
+    console.log(`\nFETCHING HISTORY (last ${HISTORY_ROUNDS} rounds)`);
     const currentBlock = Number(await web3.eth.getBlockNumber());
     const fromBlock = Math.max(0, currentBlock - 1_000_000);
     const events = await auction.getPastEvents("AuctionResolved", { fromBlock, toBlock: "latest" });
@@ -251,7 +287,7 @@ async function calculateOptimalTimeboostBid() {
     // Run analysis
     const analysis = analyzeHistory(prices);
 
-    console.log("\n==================== PRICE ANALYSIS ====================");
+    console.log("\nPRICE ANALYSIS");
     console.log("Sample size:", analysis.count);
     console.log("Mean:", fmt(analysis.mean), symbol);
     console.log("Median:", fmt(analysis.median), symbol);
@@ -268,7 +304,7 @@ async function calculateOptimalTimeboostBid() {
     // Calculate optimal bids
     const strategies = calculateOptimalBids(analysis, reservePrice);
 
-    console.log("\n==================== OPTIMAL BID STRATEGIES ====================");
+    console.log("\nOPTIMAL BID STRATEGIES");
     strategies.forEach((s) => {
         console.log(`\n--- ${s.name} ---`);
         console.log("Description:", s.description);
@@ -276,7 +312,7 @@ async function calculateOptimalTimeboostBid() {
     });
 
     // Final recommendation
-    console.log("\n==================== RECOMMENDATION ====================");
+    console.log("\nRECOMMENDATION");
     const recommended = strategies.find((s) => s.name === "TREND-ADJUSTED");
     console.log("Based on current market conditions:");
     console.log("Trend:", analysis.trend);

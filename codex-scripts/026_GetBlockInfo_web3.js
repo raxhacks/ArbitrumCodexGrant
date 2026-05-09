@@ -1,10 +1,8 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
 const BLOCK_NUMBER = "latest"; // "latest", "pending", "earliest", or a number
 
-// ==================== MAIN ====================
 async function getBlockInfo() {
     const web3 = new Web3(RPC_URL);
 
@@ -14,7 +12,7 @@ async function getBlockInfo() {
         process.exit(1);
     }
 
-    console.log("==================== BLOCK INFO ====================");
+    console.log("BLOCK INFO");
     console.log("Number:", block.number.toString());
     console.log("Hash:", block.hash);
     console.log("Parent hash:", block.parentHash);
@@ -22,11 +20,11 @@ async function getBlockInfo() {
     console.log("Nonce:", block.nonce);
     console.log("Difficulty:", block.difficulty.toString());
 
-    console.log("\n==================== MINER / VALIDATOR ====================");
+    console.log("\nMINER / VALIDATOR");
     console.log("Miner:", block.miner);
     console.log("Extra data:", block.extraData);
 
-    console.log("\n==================== GAS ====================");
+    console.log("\nGAS");
     console.log("Gas limit:", block.gasLimit.toString());
     console.log("Gas used:", block.gasUsed.toString());
     const gasUsedPercent = (Number(block.gasUsed) / Number(block.gasLimit) * 100).toFixed(2);
@@ -35,7 +33,7 @@ async function getBlockInfo() {
         console.log("Base fee per gas:", Web3.utils.fromWei(block.baseFeePerGas.toString(), "gwei"), "gwei");
     }
 
-    console.log("\n==================== TRANSACTIONS ====================");
+    console.log("\nTRANSACTIONS");
     console.log("Transaction count:", block.transactions.length);
 
     if (block.transactions.length > 0 && typeof block.transactions[0] === "object") {
@@ -82,14 +80,14 @@ async function getBlockInfo() {
         }
     }
 
-    console.log("\n==================== ROOTS ====================");
+    console.log("\nROOTS");
     console.log("State root:", block.stateRoot);
     console.log("Receipts root:", block.receiptsRoot);
     console.log("Transactions root:", block.transactionsRoot);
 
     // Blob gas (EIP-4844)
     if (block.blobGasUsed !== null && block.blobGasUsed !== undefined) {
-        console.log("\n==================== BLOB GAS (EIP-4844) ====================");
+        console.log("\nBLOB GAS (EIP-4844)");
         console.log("Blob gas used:", block.blobGasUsed.toString());
     }
 }

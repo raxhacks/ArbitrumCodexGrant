@@ -1,9 +1,7 @@
 const { ethers } = require("ethers");
 
-// ==================== CONFIGURATION ====================
-const PRIVATE_KEY = "YOUR_PRIVATE_KEY_HERE";
+const PRIVATE_KEY = process.env.PRIVATE_KEY || ethers.Wallet.createRandom().privateKey;
 
-// ==================== EIP-712 DOMAIN ====================
 const domain = {
     name: "ExampleDApp",
     version: "1",
@@ -11,7 +9,6 @@ const domain = {
     verifyingContract: "0x0000000000000000000000000000000000000001",
 };
 
-// ==================== EIP-712 TYPES ====================
 const types = {
     Order: [
         { name: "maker", type: "address" },
@@ -22,7 +19,6 @@ const types = {
     ],
 };
 
-// ==================== EIP-712 MESSAGE ====================
 const message = {
     maker: "0x0000000000000000000000000000000000000001",
     taker: "0x0000000000000000000000000000000000000002",
@@ -31,29 +27,28 @@ const message = {
     deadline: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
 };
 
-// ==================== MAIN ====================
 async function signEIP712() {
     const wallet = new ethers.Wallet(PRIVATE_KEY);
 
-    console.log("==================== SIGNER ====================");
+    console.log("SIGNER");
     console.log("Address:", wallet.address);
 
     // Display domain
-    console.log("\n==================== EIP-712 DOMAIN ====================");
+    console.log("\nEIP-712 DOMAIN");
     console.log("Name:", domain.name);
     console.log("Version:", domain.version);
     console.log("Chain ID:", domain.chainId);
     console.log("Verifying contract:", domain.verifyingContract);
 
     // Display types
-    console.log("\n==================== EIP-712 TYPES ====================");
+    console.log("\nEIP-712 TYPES");
     Object.entries(types).forEach(([typeName, fields]) => {
         console.log(`${typeName}:`);
         fields.forEach((f) => console.log(`  ${f.name}: ${f.type}`));
     });
 
     // Display message
-    console.log("\n==================== EIP-712 MESSAGE ====================");
+    console.log("\nEIP-712 MESSAGE");
     Object.entries(message).forEach(([key, value]) => {
         let display = value.toString();
         if (key === "amount") display = `${value.toString()} (${ethers.formatEther(value)} ETH)`;
@@ -63,7 +58,7 @@ async function signEIP712() {
 
     // Compute domain separator
     const domainSeparator = ethers.TypedDataEncoder.hashDomain(domain);
-    console.log("\n==================== HASHES ====================");
+    console.log("\nHASHES");
     console.log("Domain separator:", domainSeparator);
 
     // Compute struct hash
@@ -75,7 +70,7 @@ async function signEIP712() {
     console.log("EIP-712 hash:", fullHash);
 
     // Sign
-    console.log("\n==================== SIGNATURE ====================");
+    console.log("\nSIGNATURE");
     const signature = await wallet.signTypedData(domain, types, message);
     console.log("Signature:", signature);
 
@@ -86,13 +81,13 @@ async function signEIP712() {
     console.log("s:", sig.s);
 
     // Verify
-    console.log("\n==================== VERIFICATION ====================");
+    console.log("\nVERIFICATION");
     const recovered = ethers.verifyTypedData(domain, types, message, signature);
     console.log("Recovered address:", recovered);
     console.log("Valid:", recovered.toLowerCase() === wallet.address.toLowerCase());
 
     // Encoded data for on-chain verification
-    console.log("\n==================== ENCODED DATA ====================");
+    console.log("\nENCODED DATA");
     const encoded = ethers.TypedDataEncoder.encode(domain, types, message);
     console.log("Encoded typed data:", encoded);
 }

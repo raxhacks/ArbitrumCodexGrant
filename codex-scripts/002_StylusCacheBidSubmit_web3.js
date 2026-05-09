@@ -1,13 +1,11 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
 const PRIVATE_KEY = "YOUR_PRIVATE_KEY_HERE";
-const CACHE_MANAGER_ADDRESS = "0xd1bBD579B127Fc8eD1cF40E8bbcf2EFBc07787AD";
+const CACHE_MANAGER_ADDRESS = "0x51dEDBD2f190E0696AFbEE5E60bFdE96d86464ec";
 const PROGRAM_ADDRESS = "YOUR_STYLUS_PROGRAM_ADDRESS_HERE";
 const BID_AMOUNT = Web3.utils.toWei("0.001", "ether");
 
-// ==================== ABI ====================
 const CACHE_MANAGER_ABI = [
     {
         name: "placeBid",
@@ -32,7 +30,6 @@ const CACHE_MANAGER_ABI = [
     },
 ];
 
-// ==================== MAIN ====================
 async function submitCacheBid() {
     const web3 = new Web3(RPC_URL);
     const account = web3.eth.accounts.privateKeyToAccount(PRIVATE_KEY);

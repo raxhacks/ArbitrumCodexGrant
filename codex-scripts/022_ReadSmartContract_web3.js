@@ -1,10 +1,8 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS_HERE";
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0x912CE59144191C1204E64559FE8253a0e49E6548";
 
-// ==================== ABI ====================
 // Replace with your contract's ABI (view/pure functions you want to read)
 const CONTRACT_ABI = [
     {
@@ -75,7 +73,6 @@ const CONTRACT_ABI = [
     },
 ];
 
-// ==================== FUNCTIONS TO CALL ====================
 const CALLS = [
     { name: "name", args: [] },
     { name: "symbol", args: [] },
@@ -86,7 +83,6 @@ const CALLS = [
     // { name: "allowance", args: ["0xOwner", "0xSpender"] },
 ];
 
-// ==================== MAIN ====================
 async function readContract() {
     const web3 = new Web3(RPC_URL);
 
@@ -99,12 +95,12 @@ async function readContract() {
 
     const contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
 
-    console.log("==================== CONTRACT ====================");
+    console.log("CONTRACT");
     console.log("Address:", CONTRACT_ADDRESS);
     console.log("Bytecode size:", (code.length - 2) / 2, "bytes");
 
     // List available view functions
-    console.log("\n==================== AVAILABLE FUNCTIONS ====================");
+    console.log("\nAVAILABLE FUNCTIONS");
     const viewFunctions = CONTRACT_ABI.filter(
         (item) => item.type === "function" && (item.stateMutability === "view" || item.stateMutability === "pure")
     );
@@ -116,7 +112,7 @@ async function readContract() {
     });
 
     // Execute calls
-    console.log("\n==================== RESULTS ====================");
+    console.log("\nRESULTS");
 
     for (const call of CALLS) {
         const { name, args } = call;
@@ -166,7 +162,7 @@ async function readContract() {
     }
 
     // Batch read
-    console.log("\n==================== BATCH READ (Promise.allSettled) ====================");
+    console.log("\nBATCH READ (Promise.allSettled)");
     const batchCalls = CALLS.map(({ name, args }) =>
         contract.methods[name](...args).call()
             .then((result) => ({ name, args, result, status: "fulfilled" }))

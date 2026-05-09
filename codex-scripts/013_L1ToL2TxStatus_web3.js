@@ -1,16 +1,13 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
-const L1_RPC_URL = "https://eth.llamarpc.com";
+const L1_RPC_URL = process.env.L1_RPC_URL || "https://ethereum-rpc.publicnode.com";
 const L2_RPC_URL = "https://arb1.arbitrum.io/rpc";
-const L1_TX_HASH = "YOUR_L1_TX_HASH_HERE";
+const L1_TX_HASH = process.env.L1_TX_HASH || "0x952967337d5b8986bbb6ad2765b3d239471b1a157cf40bb6f26caae81610056e";
 
-// ==================== CONTRACT ADDRESSES ====================
 const DELAYED_INBOX_ADDRESS = "0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f";
 const BRIDGE_ADDRESS = "0x8315177aB297bA92A06054cE80a67Ed4DBd7ed3a";
 const ARB_RETRYABLE_TX_ADDRESS = "0x000000000000000000000000000000000000006E";
 
-// ==================== ABI ====================
 const BRIDGE_ABI = [
     {
         name: "MessageDelivered",
@@ -97,7 +94,6 @@ const ARB_RETRYABLE_TX_ABI = [
     },
 ];
 
-// ==================== STATUS ENUM ====================
 const STATUS = {
     NOT_FOUND: "NOT_FOUND",
     L1_PENDING: "L1_PENDING",
@@ -108,13 +104,12 @@ const STATUS = {
     EXPIRED: "EXPIRED",
 };
 
-// ==================== MAIN ====================
 async function detectL1ToL2Status() {
     const l1Web3 = new Web3(L1_RPC_URL);
     const l2Web3 = new Web3(L2_RPC_URL);
 
     // Step 1: Fetch L1 transaction
-    console.log("==================== L1 TRANSACTION ====================");
+    console.log("L1 TRANSACTION");
     const l1Tx = await l1Web3.eth.getTransaction(L1_TX_HASH);
     if (!l1Tx) {
         console.log("Status:", STATUS.NOT_FOUND);
@@ -135,7 +130,7 @@ async function detectL1ToL2Status() {
     }
 
     // Step 2: Check L1 receipt
-    console.log("\n==================== L1 RECEIPT ====================");
+    console.log("\nL1 RECEIPT");
     const l1Receipt = await l1Web3.eth.getTransactionReceipt(L1_TX_HASH);
     if (!l1Receipt) {
         console.log("Status:", STATUS.L1_PENDING);
@@ -153,7 +148,7 @@ async function detectL1ToL2Status() {
     }
 
     // Step 3: Parse bridge MessageDelivered events
-    console.log("\n==================== BRIDGE MESSAGES ====================");
+    console.log("\nBRIDGE MESSAGES");
     const bridgeContract = new l1Web3.eth.Contract(BRIDGE_ABI, BRIDGE_ADDRESS);
     const inboxContract = new l1Web3.eth.Contract(INBOX_ABI, DELAYED_INBOX_ADDRESS);
 
@@ -194,7 +189,7 @@ async function detectL1ToL2Status() {
     // Step 4: Check retryable ticket on L2
     // NOTE: Retryable ticket IDs are computed internally by Arbitrum from the full
     // message data, not from a simple hash. For precise tracking, use the Arbitrum SDK.
-    console.log("\n==================== L2 RETRYABLE TICKET ====================");
+    console.log("\nL2 RETRYABLE TICKET");
     const retryable = new l2Web3.eth.Contract(ARB_RETRYABLE_TX_ABI, ARB_RETRYABLE_TX_ADDRESS);
     const lifetime = await retryable.methods.getLifetime().call();
     console.log("Retryable ticket lifetime:", (Number(lifetime) / 86400).toFixed(1), "days");
@@ -251,7 +246,7 @@ async function detectL1ToL2Status() {
     }
 
     // Step 5: Determine final status
-    console.log("\n==================== FINAL STATUS ====================");
+    console.log("\nFINAL STATUS");
 
     if (l2TxSearchResults.length === 0) {
         console.log("No retryable tickets found in the search range.");

@@ -1,13 +1,11 @@
 const { ethers } = require("ethers");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
 const PRIVATE_KEY = "YOUR_PRIVATE_KEY_HERE";
-const EXPRESS_LANE_AUCTION_ADDRESS = "0x00a0F15B79D1D3E5991929FaAbCf2Aa65623530d";
+const EXPRESS_LANE_AUCTION_ADDRESS = "0x5fcb496a31b7AE91e7c9078Ec662bd7A55cd3079";
 const EXPRESS_LANE_CONTROLLER = "YOUR_EXPRESS_LANE_CONTROLLER_ADDRESS";
 const BID_AMOUNT = ethers.parseEther("0.001");
 
-// ==================== ABI ====================
 const EXPRESS_LANE_AUCTION_ABI = [
     "function currentRound() external view returns (uint64)",
     "function roundDurationSeconds() external view returns (uint64)",
@@ -25,7 +23,6 @@ const ERC20_ABI = [
     "function decimals() external view returns (uint8)",
 ];
 
-// ==================== BID SIGNING ====================
 async function signBid(wallet, chainId, auctionAddress, round, expressLaneController, amount) {
     const domain = {
         name: "ExpressLaneAuction",
@@ -51,7 +48,6 @@ async function signBid(wallet, chainId, auctionAddress, round, expressLaneContro
     return await wallet.signTypedData(domain, types, value);
 }
 
-// ==================== MAIN ====================
 async function submitTimeboostBid() {
     const provider = new ethers.JsonRpcProvider(RPC_URL);
     const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
@@ -60,7 +56,7 @@ async function submitTimeboostBid() {
     const network = await provider.getNetwork();
     const chainId = Number(network.chainId);
 
-    console.log("==================== ACCOUNT INFO ====================");
+    console.log("ACCOUNT INFO");
     console.log("Wallet:", wallet.address);
     console.log("Chain ID:", chainId);
 
@@ -83,7 +79,7 @@ async function submitTimeboostBid() {
 
     const targetRound = BigInt(currentRound) + 1n;
 
-    console.log("\n==================== AUCTION STATE ====================");
+    console.log("\nAUCTION STATE");
     console.log("Current round:", currentRound.toString());
     console.log("Target round:", targetRound.toString());
     console.log("Round duration:", roundDuration.toString(), "seconds");
@@ -98,7 +94,7 @@ async function submitTimeboostBid() {
         process.exit(1);
     }
 
-    console.log("\n==================== TOKEN BALANCE ====================");
+    console.log("\nTOKEN BALANCE");
     console.log(`Balance: ${ethers.formatUnits(balance, decimals)} ${symbol}`);
     console.log(`Allowance: ${ethers.formatUnits(allowance, decimals)} ${symbol}`);
 
@@ -119,7 +115,7 @@ async function submitTimeboostBid() {
     }
 
     // Sign the bid
-    console.log("\n==================== SIGNING BID ====================");
+    console.log("\nSIGNING BID");
     const signature = await signBid(
         wallet,
         chainId,
@@ -131,7 +127,7 @@ async function submitTimeboostBid() {
     console.log("Signature:", signature);
 
     // Submit the bid
-    console.log("\n==================== SUBMITTING BID ====================");
+    console.log("\nSUBMITTING BID");
     console.log("Round:", targetRound.toString());
     console.log("Express lane controller:", EXPRESS_LANE_CONTROLLER);
     console.log("Amount:", ethers.formatUnits(BID_AMOUNT, decimals), symbol);

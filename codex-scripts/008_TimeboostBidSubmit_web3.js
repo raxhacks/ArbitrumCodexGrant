@@ -1,14 +1,12 @@
 const { Web3 } = require("web3");
 const { secp256k1 } = require("ethereum-cryptography/secp256k1");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
 const PRIVATE_KEY = "YOUR_PRIVATE_KEY_HERE";
-const EXPRESS_LANE_AUCTION_ADDRESS = "0x00a0F15B79D1D3E5991929FaAbCf2Aa65623530d";
+const EXPRESS_LANE_AUCTION_ADDRESS = "0x5fcb496a31b7AE91e7c9078Ec662bd7A55cd3079";
 const EXPRESS_LANE_CONTROLLER = "YOUR_EXPRESS_LANE_CONTROLLER_ADDRESS";
 const BID_AMOUNT = Web3.utils.toWei("0.001", "ether");
 
-// ==================== ABI ====================
 const EXPRESS_LANE_AUCTION_ABI = [
     {
         name: "currentRound",
@@ -103,7 +101,6 @@ const ERC20_ABI = [
     },
 ];
 
-// ==================== BID SIGNING ====================
 function signBid(web3, privateKey, chainId, auctionAddress, round, expressLaneController, amount) {
     // Build EIP-712 domain separator
     const domainTypeHash = web3.utils.keccak256(
@@ -146,7 +143,6 @@ function signBid(web3, privateKey, chainId, auctionAddress, round, expressLaneCo
     return r + s.slice(2) + v.slice(2);
 }
 
-// ==================== MAIN ====================
 async function submitTimeboostBid() {
     const web3 = new Web3(RPC_URL);
     const account = web3.eth.accounts.privateKeyToAccount(PRIVATE_KEY);
@@ -155,7 +151,7 @@ async function submitTimeboostBid() {
 
     const chainId = Number(await web3.eth.getChainId());
 
-    console.log("==================== ACCOUNT INFO ====================");
+    console.log("ACCOUNT INFO");
     console.log("Wallet:", account.address);
     console.log("Chain ID:", chainId);
 
@@ -167,7 +163,7 @@ async function submitTimeboostBid() {
 
     const targetRound = BigInt(currentRound) + 1n;
 
-    console.log("\n==================== AUCTION STATE ====================");
+    console.log("\nAUCTION STATE");
     console.log("Current round:", currentRound.toString());
     console.log("Target round:", targetRound.toString());
     console.log("Round duration:", roundDuration.toString(), "seconds");
@@ -198,7 +194,7 @@ async function submitTimeboostBid() {
     const balance = await biddingToken.methods.balanceOf(account.address).call();
     const allowance = await biddingToken.methods.allowance(account.address, EXPRESS_LANE_AUCTION_ADDRESS).call();
 
-    console.log("\n==================== TOKEN BALANCE ====================");
+    console.log("\nTOKEN BALANCE");
     console.log(`Balance: ${fmtToken(balance)} ${symbol}`);
     console.log(`Allowance: ${fmtToken(allowance)} ${symbol}`);
 
@@ -221,7 +217,7 @@ async function submitTimeboostBid() {
     }
 
     // Sign the bid
-    console.log("\n==================== SIGNING BID ====================");
+    console.log("\nSIGNING BID");
     const signature = signBid(
         web3,
         PRIVATE_KEY,
@@ -234,7 +230,7 @@ async function submitTimeboostBid() {
     console.log("Signature:", signature);
 
     // Submit the bid
-    console.log("\n==================== SUBMITTING BID ====================");
+    console.log("\nSUBMITTING BID");
     console.log("Round:", targetRound.toString());
     console.log("Express lane controller:", EXPRESS_LANE_CONTROLLER);
     console.log("Amount:", fmtToken(BID_AMOUNT), symbol);

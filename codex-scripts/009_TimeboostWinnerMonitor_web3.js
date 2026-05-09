@@ -1,12 +1,12 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
 const WS_URL = "wss://arb1.arbitrum.io/ws";
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const EXPRESS_LANE_AUCTION_ADDRESS = "0x00a0F15B79D1D3E5991929FaAbCf2Aa65623530d";
+const EXPRESS_LANE_AUCTION_ADDRESS = "0x5fcb496a31b7AE91e7c9078Ec662bd7A55cd3079";
 const POLL_INTERVAL_MS = 5000;
+const MAX_EVENTS = Number(process.env.MAX_EVENTS ?? 5);
+const MAX_DURATION_MS = Number(process.env.MAX_DURATION_MS ?? 12000);
 
-// ==================== ABI ====================
 const EXPRESS_LANE_AUCTION_ABI = [
     {
         name: "currentRound",
@@ -75,7 +75,6 @@ const ERC20_ABI = [
     },
 ];
 
-// ==================== TOKEN INFO ====================
 let tokenSymbol = "ETH";
 let tokenDecimals = 18;
 const fmtToken = (val) => {
@@ -85,7 +84,6 @@ const fmtToken = (val) => {
     return frac ? `${whole}.${frac}` : whole;
 };
 
-// ==================== STATS ====================
 const stats = {
     totalAuctions: 0,
     totalRevenue: 0n,
@@ -112,7 +110,7 @@ function updateStats(round, bidder, controller, price) {
 }
 
 function printStats() {
-    console.log("\n==================== RUNNING STATS ====================");
+    console.log("\nRUNNING STATS");
     console.log("Total auctions observed:", stats.totalAuctions);
     console.log("Total revenue:", fmtToken(stats.totalRevenue), tokenSymbol);
     console.log("Avg price:", stats.totalAuctions > 0
@@ -138,9 +136,8 @@ function printStats() {
         .forEach(([addr, count]) => console.log(`  ${addr}: ${count} rounds`));
 }
 
-// ==================== WEBSOCKET MONITOR ====================
 async function monitorWebSocket() {
-    console.log("==================== TIMEBOOST WINNER MONITOR (WebSocket) ====================");
+    console.log("TIMEBOOST WINNER MONITOR (WebSocket)");
     console.log("Listening for AuctionResolved events...\n");
 
     const web3 = new Web3(WS_URL);
@@ -171,7 +168,7 @@ async function monitorWebSocket() {
         const { round, firstPriceBidder, expressLaneController, price } = event.returnValues;
         const timestamp = new Date().toISOString();
 
-        console.log(`==================== AUCTION RESOLVED [${timestamp}] ====================`);
+        console.log(`AUCTION RESOLVED [${timestamp}]`);
         console.log("Round:", round.toString());
         console.log("Winning bidder:", firstPriceBidder);
         console.log("Express lane controller:", expressLaneController);
@@ -195,9 +192,8 @@ async function monitorWebSocket() {
     });
 }
 
-// ==================== POLLING MONITOR (FALLBACK) ====================
 async function monitorPolling() {
-    console.log("==================== TIMEBOOST WINNER MONITOR (Polling) ====================");
+    console.log("TIMEBOOST WINNER MONITOR (Polling)");
     console.log(`Polling every ${POLL_INTERVAL_MS / 1000}s for AuctionResolved events...\n`);
 
     const web3 = new Web3(RPC_URL);
@@ -232,7 +228,7 @@ async function monitorPolling() {
                 const { round, firstPriceBidder, expressLaneController, price } = event.returnValues;
                 const timestamp = new Date().toISOString();
 
-                console.log(`==================== AUCTION RESOLVED [${timestamp}] ====================`);
+                console.log(`AUCTION RESOLVED [${timestamp}]`);
                 console.log("Round:", round.toString());
                 console.log("Winning bidder:", firstPriceBidder);
                 console.log("Express lane controller:", expressLaneController);
@@ -250,7 +246,22 @@ async function monitorPolling() {
         }
     };
 
-    const interval = setInterval(poll, POLL_INTERVAL_MS);
+    const interval = setInterval(() => {
+        poll();
+        if (stats.totalAuctions >= MAX_EVENTS) {
+            console.log(`\n\nReached MAX_EVENTS=${MAX_EVENTS}.`);
+            clearInterval(interval);
+            printStats();
+            process.exit(0);
+        }
+    }, POLL_INTERVAL_MS);
+
+    setTimeout(() => {
+        console.log(`\n\nReached MAX_DURATION_MS=${MAX_DURATION_MS}.`);
+        clearInterval(interval);
+        printStats();
+        process.exit(0);
+    }, MAX_DURATION_MS);
 
     process.once("SIGINT", () => {
         console.log("\n\nShutting down monitor...");
@@ -260,7 +271,12 @@ async function monitorPolling() {
     });
 }
 
-// ==================== ENTRY POINT ====================
+// Global self-terminate so the WebSocket path can't hang indefinitely.
+setTimeout(() => {
+    console.log(`\n\nGlobal MAX_DURATION_MS=${MAX_DURATION_MS} reached.`);
+    process.exit(0);
+}, MAX_DURATION_MS);
+
 (async () => {
     try {
         await monitorWebSocket();

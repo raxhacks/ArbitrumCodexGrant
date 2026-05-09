@@ -1,6 +1,5 @@
 const { ethers } = require("ethers");
 
-// ==================== CONFIGURATION ====================
 const RPC_URLS = {
     mainnet: {
         http: "https://arb1.arbitrum.io/rpc",
@@ -18,7 +17,6 @@ const CONNECTION_TIMEOUT_MS = 5000;
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
 
-// ==================== RPC INITIALIZER ====================
 class RPCConnection {
     constructor() {
         this.provider = null;
@@ -47,7 +45,7 @@ class RPCConnection {
     }
 
     async connectHTTP() {
-        console.log("==================== HTTP RPC INITIALIZATION ====================");
+        console.log("HTTP RPC INITIALIZATION");
 
         const endpoints = [
             { name: "mainnet", url: RPC_URLS.mainnet.http },
@@ -91,7 +89,7 @@ class RPCConnection {
             return false;
         }
 
-        console.log("\n==================== WEBSOCKET INITIALIZATION ====================");
+        console.log("\nWEBSOCKET INITIALIZATION");
         console.log("URL:", RPC_URLS.mainnet.ws);
 
         try {
@@ -124,7 +122,7 @@ class RPCConnection {
     async benchmark() {
         if (!this.provider) return;
 
-        console.log("\n==================== RPC BENCHMARK ====================");
+        console.log("\nRPC BENCHMARK");
 
         const tests = [
             { name: "eth_blockNumber", fn: () => this.provider.getBlockNumber() },
@@ -150,7 +148,7 @@ class RPCConnection {
     async getFullStatus() {
         if (!this.provider) return;
 
-        console.log("\n==================== RPC STATUS ====================");
+        console.log("\nRPC STATUS");
         console.log("Active RPC:", this.activeRpc);
         console.log("Chain ID:", this.chainId);
 
@@ -201,7 +199,6 @@ class RPCConnection {
     }
 }
 
-// ==================== MAIN ====================
 async function initRPC() {
     const rpc = new RPCConnection();
 
@@ -222,7 +219,7 @@ async function initRPC() {
     await rpc.getFullStatus();
 
     // Summary
-    console.log("\n==================== INITIALIZATION COMPLETE ====================");
+    console.log("\nINITIALIZATION COMPLETE");
     console.log("HTTP: READY");
     console.log("WebSocket:", rpc.wsProvider ? "READY" : "UNAVAILABLE");
     console.log("RPC:", rpc.activeRpc);

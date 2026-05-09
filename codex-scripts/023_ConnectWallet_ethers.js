@@ -1,10 +1,8 @@
 const { ethers } = require("ethers");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const PRIVATE_KEY = "YOUR_PRIVATE_KEY_HERE";
+const PRIVATE_KEY = process.env.PRIVATE_KEY || ethers.Wallet.createRandom().privateKey;
 
-// ==================== KNOWN CHAINS ====================
 const CHAINS = {
     1: { name: "Ethereum Mainnet", currency: "ETH" },
     42161: { name: "Arbitrum One", currency: "ETH" },
@@ -18,10 +16,9 @@ const CHAINS = {
     11155111: { name: "Sepolia", currency: "ETH" },
 };
 
-// ==================== MAIN ====================
 async function connectWallet() {
     // Connect provider
-    console.log("==================== CONNECTING ====================");
+    console.log("CONNECTING");
     console.log("RPC:", RPC_URL);
 
     const provider = new ethers.JsonRpcProvider(RPC_URL);
@@ -42,7 +39,7 @@ async function connectWallet() {
     const chainId = Number(network.chainId);
     const chainInfo = CHAINS[chainId] || { name: "Unknown", currency: "ETH" };
 
-    console.log("\n==================== NETWORK ====================");
+    console.log("\nNETWORK");
     console.log("Chain ID:", chainId);
     console.log("Network:", chainInfo.name);
     console.log("Currency:", chainInfo.currency);
@@ -55,13 +52,13 @@ async function connectWallet() {
 
     // Fee data
     const feeData = await provider.getFeeData();
-    console.log("\n==================== GAS FEES ====================");
+    console.log("\nGAS FEES");
     console.log("Gas price:", feeData.gasPrice ? ethers.formatUnits(feeData.gasPrice, "gwei") + " gwei" : "N/A");
     console.log("Max fee per gas:", feeData.maxFeePerGas ? ethers.formatUnits(feeData.maxFeePerGas, "gwei") + " gwei" : "N/A");
     console.log("Max priority fee:", feeData.maxPriorityFeePerGas ? ethers.formatUnits(feeData.maxPriorityFeePerGas, "gwei") + " gwei" : "N/A");
 
     // Connect wallet
-    console.log("\n==================== WALLET ====================");
+    console.log("\nWALLET");
     const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
     console.log("Address:", wallet.address);
@@ -87,7 +84,7 @@ async function connectWallet() {
     console.log("Is EOA:", walletCode === "0x");
 
     // Sign a test message to verify wallet works
-    console.log("\n==================== SIGN TEST ====================");
+    console.log("\nSIGN TEST");
     const testMessage = "Wallet connection test";
     const signature = await wallet.signMessage(testMessage);
     const recovered = ethers.verifyMessage(testMessage, signature);
@@ -98,7 +95,7 @@ async function connectWallet() {
     console.log("Verified:", recovered.toLowerCase() === wallet.address.toLowerCase());
 
     // Summary
-    console.log("\n==================== CONNECTION SUMMARY ====================");
+    console.log("\nCONNECTION SUMMARY");
     console.log("Status: CONNECTED");
     console.log("Network:", chainInfo.name, `(${chainId})`);
     console.log("Address:", wallet.address);

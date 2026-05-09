@@ -1,12 +1,12 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
 const WS_URL = "wss://arb1.arbitrum.io/ws";
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS_HERE";
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
 const POLL_INTERVAL_MS = 3000;
+const MAX_EVENTS = Number(process.env.MAX_EVENTS ?? 10);
+const MAX_DURATION_MS = Number(process.env.MAX_DURATION_MS ?? 8000);
 
-// ==================== ABI ====================
 // Replace with your contract's events
 const CONTRACT_ABI = [
     {
@@ -37,15 +37,13 @@ const CONTRACT_ABI = [
     },
 ];
 
-// ==================== EVENT FILTER ====================
 const EVENT_NAME = null; // null = all events, or "Transfer", "Approval", etc.
 
-// ==================== HELPERS ====================
 let eventCount = 0;
 
 function printEvent(eventAbi, returnValues, log, timestamp) {
     eventCount++;
-    console.log(`\n==================== EVENT #${eventCount} [${timestamp}] ====================`);
+    console.log(`\nEVENT #${eventCount} [${timestamp}]`);
     console.log("Name:", eventAbi.name);
     console.log("Block:", log.blockNumber.toString());
     console.log("Tx:", log.transactionHash);
@@ -73,7 +71,7 @@ function printEvent(eventAbi, returnValues, log, timestamp) {
 
 function printRawLog(log, timestamp) {
     eventCount++;
-    console.log(`\n==================== EVENT #${eventCount} [${timestamp}] ====================`);
+    console.log(`\nEVENT #${eventCount} [${timestamp}]`);
     console.log("Name: UNKNOWN");
     console.log("Address:", log.address);
     console.log("Block:", log.blockNumber.toString());
@@ -82,13 +80,17 @@ function printRawLog(log, timestamp) {
     console.log("Data:", log.data);
 }
 
-// ==================== WEBSOCKET LISTENER ====================
 async function listenWebSocket() {
-    console.log("==================== EVENT LISTENER (WebSocket) ====================");
+    console.log("EVENT LISTENER (WebSocket)");
     console.log("Contract:", CONTRACT_ADDRESS);
     console.log("Filter:", EVENT_NAME || "ALL EVENTS");
     console.log("WebSocket:", WS_URL);
     console.log("\nListening...\n");
+
+    setTimeout(() => {
+        console.log(`\n\nReached MAX_DURATION_MS=${MAX_DURATION_MS}. Total events captured: ${eventCount}`);
+        process.exit(0);
+    }, MAX_DURATION_MS);
 
     const web3 = new Web3(WS_URL);
     const contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
@@ -139,9 +141,8 @@ async function listenWebSocket() {
     });
 }
 
-// ==================== POLLING LISTENER (FALLBACK) ====================
 async function listenPolling() {
-    console.log("==================== EVENT LISTENER (Polling) ====================");
+    console.log("EVENT LISTENER (Polling)");
     console.log("Contract:", CONTRACT_ADDRESS);
     console.log("Filter:", EVENT_NAME || "ALL EVENTS");
     console.log("RPC:", RPC_URL);
@@ -198,7 +199,20 @@ async function listenPolling() {
         }
     };
 
-    const interval = setInterval(poll, POLL_INTERVAL_MS);
+    const interval = setInterval(() => {
+        poll();
+        if (eventCount >= MAX_EVENTS) {
+            console.log(`\n\nReached MAX_EVENTS=${MAX_EVENTS}. Stopping.`);
+            clearInterval(interval);
+            process.exit(0);
+        }
+    }, POLL_INTERVAL_MS);
+
+    setTimeout(() => {
+        console.log(`\n\nReached MAX_DURATION_MS=${MAX_DURATION_MS}. Total events captured: ${eventCount}`);
+        clearInterval(interval);
+        process.exit(0);
+    }, MAX_DURATION_MS);
 
     process.once("SIGINT", () => {
         console.log(`\n\nStopping listener. Total events captured: ${eventCount}`);
@@ -207,7 +221,6 @@ async function listenPolling() {
     });
 }
 
-// ==================== ENTRY POINT ====================
 (async () => {
     try {
         await listenWebSocket();

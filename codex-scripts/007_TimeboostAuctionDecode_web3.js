@@ -1,11 +1,9 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const EXPRESS_LANE_AUCTION_ADDRESS = "0x00a0F15B79D1D3E5991929FaAbCf2Aa65623530d";
-const TX_HASH = "YOUR_TX_HASH_HERE"; // Transaction hash to decode
+const EXPRESS_LANE_AUCTION_ADDRESS = "0x5fcb496a31b7AE91e7c9078Ec662bd7A55cd3079";
+const TX_HASH = process.env.TX_HASH || "0xb19e7f3ae8a72fadc2f95e8d28957a861496590a86c8e5b0a2d939885b6bbdea";
 
-// ==================== ABI ====================
 const EXPRESS_LANE_AUCTION_ABI = [
     {
         name: "placeBid",
@@ -192,7 +190,6 @@ const EXPRESS_LANE_AUCTION_ABI = [
     },
 ];
 
-// ==================== MAIN ====================
 async function decodeTimeboostTx() {
     const web3 = new Web3(RPC_URL);
     const auction = new web3.eth.Contract(EXPRESS_LANE_AUCTION_ABI, EXPRESS_LANE_AUCTION_ADDRESS);
@@ -204,7 +201,7 @@ async function decodeTimeboostTx() {
         process.exit(1);
     }
 
-    console.log("==================== TRANSACTION INFO ====================");
+    console.log("TRANSACTION INFO");
     console.log("Hash:", tx.hash);
     console.log("From:", tx.from);
     console.log("To:", tx.to);
@@ -213,7 +210,7 @@ async function decodeTimeboostTx() {
     console.log("Gas limit:", tx.gas.toString());
 
     // Decode function call
-    console.log("\n==================== DECODED FUNCTION CALL ====================");
+    console.log("\nDECODED FUNCTION CALL");
 
     // Get function selector (first 4 bytes)
     const selector = tx.input.slice(0, 10);
@@ -262,12 +259,12 @@ async function decodeTimeboostTx() {
         return;
     }
 
-    console.log("\n==================== TRANSACTION RESULT ====================");
+    console.log("\nTRANSACTION RESULT");
     console.log("Status:", receipt.status ? "SUCCESS" : "REVERTED");
     console.log("Gas used:", receipt.gasUsed.toString());
     console.log("Effective gas price:", Web3.utils.fromWei(receipt.effectiveGasPrice, "gwei"), "gwei");
 
-    console.log("\n==================== DECODED EVENTS ====================");
+    console.log("\nDECODED EVENTS");
     console.log("Total logs:", receipt.logs.length);
 
     const eventAbis = EXPRESS_LANE_AUCTION_ABI.filter((item) => item.type === "event");

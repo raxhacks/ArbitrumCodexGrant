@@ -1,27 +1,45 @@
 const { ethers } = require("ethers");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const EXPRESS_LANE_AUCTION_ADDRESS = "0x00a0F15B79D1D3E5991929FaAbCf2Aa65623530d";
+const CHAIN_ID = 42161;
+const EXPRESS_LANE_AUCTION_ADDRESS = "0x5fcb496a31b7AE91e7c9078Ec662bd7A55cd3079";
 const HISTORY_ROUNDS = 100; // Number of past rounds to analyze
 const WIN_PROBABILITY_TARGET = 0.8; // 80% win probability target
-
-// ==================== ABI ====================
-const EXPRESS_LANE_AUCTION_ABI = [
-    "function currentRound() external view returns (uint64)",
-    "function reservePrice() external view returns (uint256)",
-    "function minReservePrice() external view returns (uint256)",
-    "function roundDurationSeconds() external view returns (uint64)",
-    "function biddingToken() external view returns (address)",
-    "event AuctionResolved(uint64 indexed round, address indexed firstPriceBidder, address indexed expressLaneController, uint256 price)",
-];
 
 const ERC20_ABI = [
     "function symbol() external view returns (string)",
     "function decimals() external view returns (uint8)",
 ];
 
-// ==================== ANALYSIS ====================
+const FALLBACK_ABI = [
+    "function currentRound() external view returns (uint64)",
+    "function reservePrice() external view returns (uint256)",
+    "function minReservePrice() external view returns (uint256)",
+    "function roundTimingInfo() external view returns (int64 offsetTimestamp, uint64 roundDurationSeconds, uint64 auctionClosingSeconds, uint64 reserveSubmissionSeconds)",
+    "function biddingToken() external view returns (address)",
+    "event AuctionResolved(bool indexed isMultiBidAuction, uint64 round, address indexed firstPriceBidder, address indexed firstPriceExpressLaneController, uint256 firstPriceAmount, uint256 price, uint64 roundStartTimestamp, uint64 roundEndTimestamp)",
+];
+
+async function loadAbi(chainId, address, provider, fallback) {
+    try {
+        const slot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+        const raw = await provider.getStorage(address, slot);
+        const impl = raw && raw !== "0x" ? "0x" + raw.slice(-40) : null;
+        const target = impl && impl !== "0x0000000000000000000000000000000000000000" ? impl : address;
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 5000);
+        const res = await fetch(`https://sourcify.dev/server/files/any/${chainId}/${target}`, { signal: ctrl.signal });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error(`Sourcify ${res.status}`);
+        const body = await res.json();
+        const meta = body.files?.find((f) => f.name === "metadata.json");
+        if (!meta) throw new Error("metadata.json missing");
+        return JSON.parse(meta.content).output.abi;
+    } catch (err) {
+        return fallback;
+    }
+}
+
 function analyzeHistory(prices) {
     if (prices.length === 0) return null;
 
@@ -156,21 +174,22 @@ function calculateOptimalBids(analysis, reservePrice) {
     return strategies;
 }
 
-// ==================== MAIN ====================
 async function calculateOptimalTimeboostBid() {
     const provider = new ethers.JsonRpcProvider(RPC_URL);
-    const auction = new ethers.Contract(EXPRESS_LANE_AUCTION_ADDRESS, EXPRESS_LANE_AUCTION_ABI, provider);
+    const abi = await loadAbi(CHAIN_ID, EXPRESS_LANE_AUCTION_ADDRESS, provider, FALLBACK_ABI);
+    const auction = new ethers.Contract(EXPRESS_LANE_AUCTION_ADDRESS, abi, provider);
 
-    const [currentRound, reservePrice, minReservePrice, roundDuration, biddingTokenAddress] = await Promise.all([
+    const [currentRound, reservePrice, minReservePrice, timing, biddingTokenAddress] = await Promise.all([
         auction.currentRound(), auction.reservePrice(), auction.minReservePrice(),
-        auction.roundDurationSeconds(), auction.biddingToken(),
+        auction.roundTimingInfo(), auction.biddingToken(),
     ]);
+    const roundDuration = timing.roundDurationSeconds;
 
     const biddingToken = new ethers.Contract(biddingTokenAddress, ERC20_ABI, provider);
     const [symbol, decimals] = await Promise.all([biddingToken.symbol(), biddingToken.decimals()]);
     const fmt = (val) => ethers.formatUnits(val, decimals);
 
-    console.log("==================== AUCTION INFO ====================");
+    console.log("AUCTION INFO");
     console.log("Current round:", currentRound.toString());
     console.log("Bidding token:", biddingTokenAddress, `(${symbol})`);
     console.log("Reserve price:", fmt(reservePrice), symbol);
@@ -178,7 +197,7 @@ async function calculateOptimalTimeboostBid() {
     console.log("Round duration:", roundDuration.toString(), "seconds");
 
     // Fetch historical auction data
-    console.log(`\n==================== FETCHING HISTORY (last ${HISTORY_ROUNDS} rounds) ====================`);
+    console.log(`\nFETCHING HISTORY (last ${HISTORY_ROUNDS} rounds)`);
     const currentBlock = await provider.getBlockNumber();
     const fromBlock = Math.max(0, currentBlock - 1_000_000);
     const filter = auction.filters.AuctionResolved();
@@ -199,7 +218,7 @@ async function calculateOptimalTimeboostBid() {
     // Run analysis
     const analysis = analyzeHistory(prices);
 
-    console.log("\n==================== PRICE ANALYSIS ====================");
+    console.log("\nPRICE ANALYSIS");
     console.log("Sample size:", analysis.count);
     console.log("Mean:", fmt(analysis.mean), symbol);
     console.log("Median:", fmt(analysis.median), symbol);
@@ -216,7 +235,7 @@ async function calculateOptimalTimeboostBid() {
     // Calculate optimal bids
     const strategies = calculateOptimalBids(analysis, reservePrice);
 
-    console.log("\n==================== OPTIMAL BID STRATEGIES ====================");
+    console.log("\nOPTIMAL BID STRATEGIES");
     strategies.forEach((s) => {
         console.log(`\n--- ${s.name} ---`);
         console.log("Description:", s.description);
@@ -224,7 +243,7 @@ async function calculateOptimalTimeboostBid() {
     });
 
     // Final recommendation
-    console.log("\n==================== RECOMMENDATION ====================");
+    console.log("\nRECOMMENDATION");
     const recommended = strategies.find((s) => s.name === "TREND-ADJUSTED");
     console.log("Based on current market conditions:");
     console.log("Trend:", analysis.trend);

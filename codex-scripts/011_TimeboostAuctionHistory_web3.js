@@ -1,54 +1,54 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const EXPRESS_LANE_AUCTION_ADDRESS = "0x00a0F15B79D1D3E5991929FaAbCf2Aa65623530d";
-let FROM_BLOCK = 0;         // Starting block (0 = auto-calculate recent range)
-const TO_BLOCK = "latest";  // End block
-const FILTER_BIDDER = "";   // Filter by bidder address (empty = all)
-const FILTER_CONTROLLER = ""; // Filter by controller address (empty = all)
+const CHAIN_ID = 42161;
+const EXPRESS_LANE_AUCTION_ADDRESS = "0x5fcb496a31b7AE91e7c9078Ec662bd7A55cd3079";
+let FROM_BLOCK = 0;
+const TO_BLOCK = "latest";
+const FILTER_BIDDER = "";
+const FILTER_CONTROLLER = "";
 
-// ==================== ABI ====================
-const EXPRESS_LANE_AUCTION_ABI = [
-    {
-        name: "currentRound",
-        type: "function",
-        stateMutability: "view",
-        inputs: [],
-        outputs: [{ name: "", type: "uint64" }],
-    },
-    {
-        name: "reservePrice",
-        type: "function",
-        stateMutability: "view",
-        inputs: [],
-        outputs: [{ name: "", type: "uint256" }],
-    },
-    {
-        name: "roundDurationSeconds",
-        type: "function",
-        stateMutability: "view",
-        inputs: [],
-        outputs: [{ name: "", type: "uint64" }],
-    },
-    {
-        name: "biddingToken",
-        type: "function",
-        stateMutability: "view",
-        inputs: [],
-        outputs: [{ name: "", type: "address" }],
-    },
-    {
-        name: "AuctionResolved",
-        type: "event",
-        inputs: [
-            { name: "round", type: "uint64", indexed: true },
-            { name: "firstPriceBidder", type: "address", indexed: true },
-            { name: "expressLaneController", type: "address", indexed: true },
-            { name: "price", type: "uint256", indexed: false },
-        ],
-    },
+const FALLBACK_ABI = [
+    { name: "currentRound", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint64" }] },
+    { name: "reservePrice", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+    { name: "roundTimingInfo", type: "function", stateMutability: "view", inputs: [], outputs: [
+        { name: "offsetTimestamp", type: "int64" },
+        { name: "roundDurationSeconds", type: "uint64" },
+        { name: "auctionClosingSeconds", type: "uint64" },
+        { name: "reserveSubmissionSeconds", type: "uint64" },
+    ]},
+    { name: "biddingToken", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "address" }] },
+    { type: "event", name: "AuctionResolved", anonymous: false, inputs: [
+        { indexed: true, name: "isMultiBidAuction", type: "bool" },
+        { indexed: false, name: "round", type: "uint64" },
+        { indexed: true, name: "firstPriceBidder", type: "address" },
+        { indexed: true, name: "firstPriceExpressLaneController", type: "address" },
+        { indexed: false, name: "firstPriceAmount", type: "uint256" },
+        { indexed: false, name: "price", type: "uint256" },
+        { indexed: false, name: "roundStartTimestamp", type: "uint64" },
+        { indexed: false, name: "roundEndTimestamp", type: "uint64" },
+    ]},
 ];
+
+async function loadAbi(web3, chainId, address, fallback) {
+    try {
+        const slot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+        const raw = await web3.eth.getStorageAt(address, slot);
+        const impl = raw && raw !== "0x" ? "0x" + raw.toString().slice(-40) : null;
+        const target = impl && impl !== "0x0000000000000000000000000000000000000000" ? impl : address;
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 5000);
+        const res = await fetch(`https://sourcify.dev/server/files/any/${chainId}/${target}`, { signal: ctrl.signal });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error(`Sourcify ${res.status}`);
+        const body = await res.json();
+        const meta = body.files?.find((f) => f.name === "metadata.json");
+        if (!meta) throw new Error("metadata.json missing");
+        return JSON.parse(meta.content).output.abi;
+    } catch (err) {
+        return fallback;
+    }
+}
 
 const ERC20_ABI = [
     {
@@ -67,14 +67,15 @@ const ERC20_ABI = [
     },
 ];
 
-// ==================== MAIN ====================
 async function readAuctionHistory() {
     const web3 = new Web3(RPC_URL);
-    const auction = new web3.eth.Contract(EXPRESS_LANE_AUCTION_ABI, EXPRESS_LANE_AUCTION_ADDRESS);
+    const abi = await loadAbi(web3, CHAIN_ID, EXPRESS_LANE_AUCTION_ADDRESS, FALLBACK_ABI);
+    const auction = new web3.eth.Contract(abi, EXPRESS_LANE_AUCTION_ADDRESS);
 
     const currentRound = await auction.methods.currentRound().call();
     const reservePrice = await auction.methods.reservePrice().call();
-    const roundDuration = await auction.methods.roundDurationSeconds().call();
+    const timing = await auction.methods.roundTimingInfo().call();
+    const roundDuration = timing.roundDurationSeconds ?? timing[1];
     const biddingTokenAddress = await auction.methods.biddingToken().call();
 
     const biddingToken = new web3.eth.Contract(ERC20_ABI, biddingTokenAddress);
@@ -88,65 +89,50 @@ async function readAuctionHistory() {
         return frac ? `${whole}.${frac}` : whole;
     };
 
-    console.log("==================== AUCTION INFO ====================");
+    console.log("AUCTION INFO");
     console.log("Current round:", currentRound.toString());
     console.log("Bidding token:", biddingTokenAddress, `(${symbol})`);
     console.log("Reserve price:", fmt(reservePrice), symbol);
     console.log("Round duration:", roundDuration.toString(), "seconds");
 
-    // Build filter
-    const filterOpts = { fromBlock: FROM_BLOCK, toBlock: TO_BLOCK };
-    if (FILTER_BIDDER) filterOpts.filter = { ...filterOpts.filter, firstPriceBidder: FILTER_BIDDER };
-    if (FILTER_CONTROLLER) filterOpts.filter = { ...filterOpts.filter, expressLaneController: FILTER_CONTROLLER };
-
-    // Auto-calculate start block if FROM_BLOCK is 0 (public RPCs limit log query range)
     if (FROM_BLOCK === 0) {
         const currentBlock = Number(await web3.eth.getBlockNumber());
-        FROM_BLOCK = Math.max(0, currentBlock - 1_000_000);
+        FROM_BLOCK = Math.max(0, currentBlock - 1000);
     }
 
-    console.log("\n==================== FETCHING AUCTION HISTORY ====================");
+    const filterOpts = { fromBlock: FROM_BLOCK, toBlock: TO_BLOCK };
+    if (FILTER_BIDDER) filterOpts.filter = { ...filterOpts.filter, firstPriceBidder: FILTER_BIDDER };
+    if (FILTER_CONTROLLER) filterOpts.filter = { ...filterOpts.filter, firstPriceExpressLaneController: FILTER_CONTROLLER };
+
+    console.log("\nFETCHING AUCTION HISTORY");
     console.log("From block:", FROM_BLOCK);
     console.log("To block:", TO_BLOCK);
     if (FILTER_BIDDER) console.log("Filtering by bidder:", FILTER_BIDDER);
     if (FILTER_CONTROLLER) console.log("Filtering by controller:", FILTER_CONTROLLER);
 
-    const events = await auction.getPastEvents("AuctionResolved", filterOpts);
-    console.log("Total auction results found:", events.length);
+    const allEvents = await auction.getPastEvents("AuctionResolved", filterOpts);
+    console.log("Total auction results found:", allEvents.length);
 
-    if (events.length === 0) {
+    if (allEvents.length === 0) {
         console.log("\nNo auction results found.");
         return;
     }
 
-    // Fetch block timestamps for each event
-    const blockCache = {};
-    const getBlockTimestamp = async (blockNumber) => {
-        if (!blockCache[blockNumber]) {
-            const block = await web3.eth.getBlock(blockNumber);
-            blockCache[blockNumber] = Number(block.timestamp);
-        }
-        return blockCache[blockNumber];
-    };
+    const events = allEvents.slice(-200);
 
-    // Collect results
-    const results = [];
-    for (const event of events) {
-        const timestamp = await getBlockTimestamp(Number(event.blockNumber));
-        results.push({
-            round: event.returnValues.round,
-            bidder: event.returnValues.firstPriceBidder,
-            controller: event.returnValues.expressLaneController,
-            price: BigInt(event.returnValues.price),
-            block: Number(event.blockNumber),
-            tx: event.transactionHash,
-            timestamp,
-        });
-    }
+    const results = events.map((event) => ({
+        round: event.returnValues.round,
+        bidder: event.returnValues.firstPriceBidder,
+        controller: event.returnValues.firstPriceExpressLaneController,
+        price: BigInt(event.returnValues.price),
+        block: Number(event.blockNumber),
+        tx: event.transactionHash,
+        timestamp: Number(event.returnValues.roundStartTimestamp),
+    }));
 
-    // Display all results
-    console.log("\n==================== AUCTION RESULTS ====================");
-    results.forEach((r, index) => {
+    // Display the most recent 50 results
+    console.log("\nAUCTION RESULTS (most recent 50)");
+    results.slice(-50).forEach((r, index) => {
         const date = new Date(r.timestamp * 1000).toISOString();
         console.log(`\n--- Result ${index + 1} | Round ${r.round.toString()} ---`);
         console.log("Date:", date);
@@ -181,7 +167,7 @@ async function readAuctionHistory() {
         controllerRounds[r.controller] = (controllerRounds[r.controller] || 0) + 1;
     });
 
-    console.log("\n==================== SUMMARY ====================");
+    console.log("\nSUMMARY");
     console.log("Total auctions:", results.length);
     console.log("Total revenue:", fmt(totalRevenue), symbol);
     console.log("Average price:", fmt(avgPrice), symbol);
@@ -190,7 +176,7 @@ async function readAuctionHistory() {
     console.log("Unique bidders:", uniqueBidders.length);
     console.log("Unique controllers:", uniqueControllers.length);
 
-    console.log("\n==================== BIDDER LEADERBOARD ====================");
+    console.log("\nBIDDER LEADERBOARD");
     Object.entries(bidderWins)
         .sort((a, b) => b[1] - a[1])
         .forEach(([addr, wins]) => {
@@ -199,7 +185,7 @@ async function readAuctionHistory() {
             console.log(`    Wins: ${wins} | Total spent: ${fmt(spent)} ${symbol} | Avg: ${fmt(spent / BigInt(wins))} ${symbol}`);
         });
 
-    console.log("\n==================== CONTROLLER LEADERBOARD ====================");
+    console.log("\nCONTROLLER LEADERBOARD");
     Object.entries(controllerRounds)
         .sort((a, b) => b[1] - a[1])
         .forEach(([addr, rounds]) => {
@@ -219,7 +205,7 @@ async function readAuctionHistory() {
         if (r.price > dailyData[day].max) dailyData[day].max = r.price;
     });
 
-    console.log("\n==================== DAILY BREAKDOWN ====================");
+    console.log("\nDAILY BREAKDOWN");
     Object.entries(dailyData)
         .sort((a, b) => a[0].localeCompare(b[0]))
         .forEach(([day, data]) => {

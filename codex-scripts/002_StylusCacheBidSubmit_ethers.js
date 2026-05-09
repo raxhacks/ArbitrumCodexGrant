@@ -1,20 +1,17 @@
 const { ethers } = require("ethers");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
 const PRIVATE_KEY = "YOUR_PRIVATE_KEY_HERE";
-const CACHE_MANAGER_ADDRESS = "0xd1bBD579B127Fc8eD1cF40E8bbcf2EFBc07787AD";
+const CACHE_MANAGER_ADDRESS = "0x51dEDBD2f190E0696AFbEE5E60bFdE96d86464ec";
 const PROGRAM_ADDRESS = "YOUR_STYLUS_PROGRAM_ADDRESS_HERE";
 const BID_AMOUNT = ethers.parseEther("0.001");
 
-// ==================== ABI ====================
 const CACHE_MANAGER_ABI = [
     "function placeBid(address program) external payable",
     "function getMinBid(address program) external view returns (uint256)",
     "function isProgramCached(address program) external view returns (bool)",
 ];
 
-// ==================== MAIN ====================
 async function submitCacheBid() {
     const provider = new ethers.JsonRpcProvider(RPC_URL);
     const wallet = new ethers.Wallet(PRIVATE_KEY, provider);

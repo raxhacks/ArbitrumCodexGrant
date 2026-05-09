@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { snippets, CATEGORIES, getSnippetsByCategory } from "@/lib/snippets";
+import { useSnippets } from "@/lib/useSnippets";
+import type { Snippet } from "@/lib/api";
 import SnippetCard from "@/components/SnippetCard";
 
 const categoryIcons: Record<string, string> = {
@@ -44,18 +45,23 @@ const NAV_ITEMS: { id: Page; label: string; iconPath: string }[] = [
 ];
 
 export default function Home() {
+  const { snippets, categories, categoryNames, isLoading, error, reload } = useSnippets();
+
+  const fallbackCategory = categoryNames[0] ?? "";
   const [page, setPage] = useState<Page>("about");
-  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);
+  const [activeCategory, setActiveCategory] = useState<string>("");
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  const effectiveCategory = activeCategory || fallbackCategory;
+
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
-    CATEGORIES.forEach((cat) => { c[cat] = getSnippetsByCategory(cat).length; });
+    for (const cat of categories) c[cat.name] = cat.count;
     return c;
-  }, []);
+  }, [categories]);
 
-  const filtered = useMemo(() => {
+  const filtered = useMemo<Snippet[]>(() => {
     if (search.trim()) {
       const q = search.toLowerCase();
       return snippets.filter(
@@ -65,8 +71,8 @@ export default function Home() {
           s.name.toLowerCase().includes(q)
       );
     }
-    return getSnippetsByCategory(activeCategory);
-  }, [activeCategory, search]);
+    return snippets.filter((s) => s.category === effectiveCategory);
+  }, [activeCategory, effectiveCategory, search, snippets]);
 
   return (
     <div className="flex h-screen overflow-hidden relative">
@@ -150,14 +156,18 @@ export default function Home() {
 
         {page === "about" ? <AboutView /> : (
           <SnippetsView
-            category={activeCategory}
+            category={effectiveCategory}
             setCategory={setActiveCategory}
             search={search}
             setSearch={(s: string) => { setSearch(s); setExpandedId(null); }}
             counts={counts}
             results={filtered}
+            categoryNames={categoryNames}
             expandedId={expandedId}
             setExpandedId={setExpandedId}
+            isLoading={isLoading}
+            error={error}
+            reload={reload}
           />
         )}
       </main>
@@ -284,12 +294,16 @@ interface SnippetsViewProps {
   search: string;
   setSearch: (s: string) => void;
   counts: Record<string, number>;
-  results: ReturnType<typeof getSnippetsByCategory>;
+  results: Snippet[];
+  categoryNames: string[];
   expandedId: string | null;
   setExpandedId: (id: string | null) => void;
+  isLoading: boolean;
+  error: string | null;
+  reload: () => void;
 }
 
-function SnippetsView({ category, setCategory, search, setSearch, counts, results, expandedId, setExpandedId }: SnippetsViewProps) {
+function SnippetsView({ category, setCategory, search, setSearch, counts, results, categoryNames, expandedId, setExpandedId, isLoading, error, reload }: SnippetsViewProps) {
   return (
     <div className="max-w-7xl mx-auto px-12 py-16">
       <div className="flex items-center gap-4 mb-12">
@@ -344,7 +358,7 @@ function SnippetsView({ category, setCategory, search, setSearch, counts, result
       </div>
 
       <div className="flex flex-nowrap justify-center gap-2.5 py-2 mb-10">
-        {CATEGORIES.map((cat) => {
+        {categoryNames.map((cat) => {
           const active = category === cat && !search.trim();
           return (
             <button
@@ -394,7 +408,29 @@ function SnippetsView({ category, setCategory, search, setSearch, counts, result
         </p>
       </div>
 
-      {results.length > 0 ? (
+      {error ? (
+        <div className="text-center py-24">
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
+            style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
+          >
+            <svg className="w-7 h-7" style={{ color: "#f87171" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            </svg>
+          </div>
+          <p className="text-sm font-medium mb-3" style={{ color: "#f87171" }}>Could not load snippets: {error}</p>
+          <button
+            onClick={reload}
+            className="px-4 py-2 text-xs font-bold rounded-lg cursor-pointer"
+            style={{ background: "rgba(45,156,219,0.12)", color: "var(--arb-sky)", border: "1px solid rgba(45,156,219,0.2)" }}
+          >Retry</button>
+        </div>
+      ) : isLoading ? (
+        <div className="text-center py-24">
+          <div className="inline-block w-8 h-8 rounded-full border-2 border-current border-r-transparent animate-spin mb-4" style={{ color: "var(--arb-sky)" }} />
+          <p className="text-sm font-medium" style={{ color: "var(--text-dim)" }}>Loading snippets…</p>
+        </div>
+      ) : results.length > 0 ? (
         expandedId ? (
           <div>
             {results.filter((s) => s.id === expandedId).map((s) => (

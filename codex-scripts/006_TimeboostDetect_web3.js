@@ -1,23 +1,19 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
 const CHAIN_ID = 42161; // Change this to check any chain
 
-// ==================== KNOWN RPC ENDPOINTS BY CHAIN ID ====================
 const RPC_BY_CHAIN_ID = {
     42161: "https://arb1.arbitrum.io/rpc",           // Arbitrum One
     42170: "https://nova.arbitrum.io/rpc",            // Arbitrum Nova
     421614: "https://sepolia-rollup.arbitrum.io/rpc", // Arbitrum Sepolia
 };
 
-// ==================== KNOWN EXPRESS LANE AUCTION ADDRESSES BY CHAIN ID ====================
 const AUCTION_BY_CHAIN_ID = {
-    42161: "0x00a0F15B79D1D3E5991929FaAbCf2Aa65623530d",  // Arbitrum One
-    42170: "0x00a0F15B79D1D3E5991929FaAbCf2Aa65623530d",  // Arbitrum Nova (update if different)
-    421614: "0x00a0F15B79D1D3E5991929FaAbCf2Aa65623530d", // Arbitrum Sepolia (update if different)
+    42161: "0x5fcb496a31b7AE91e7c9078Ec662bd7A55cd3079",  // Arbitrum One
+    42170: "0x5fcb496a31b7AE91e7c9078Ec662bd7A55cd3079",  // Arbitrum Nova (update if different)
+    421614: "0x5fcb496a31b7AE91e7c9078Ec662bd7A55cd3079", // Arbitrum Sepolia (update if different)
 };
 
-// ==================== ABI ====================
 const EXPRESS_LANE_AUCTION_ABI = [
     {
         name: "currentRound",
@@ -27,11 +23,16 @@ const EXPRESS_LANE_AUCTION_ABI = [
         outputs: [{ name: "", type: "uint64" }],
     },
     {
-        name: "roundDurationSeconds",
+        name: "roundTimingInfo",
         type: "function",
         stateMutability: "view",
         inputs: [],
-        outputs: [{ name: "", type: "uint64" }],
+        outputs: [
+            { name: "offsetTimestamp", type: "int64" },
+            { name: "roundDurationSeconds", type: "uint64" },
+            { name: "auctionClosingSeconds", type: "uint64" },
+            { name: "reserveSubmissionSeconds", type: "uint64" },
+        ],
     },
     {
         name: "reservePrice",
@@ -66,7 +67,6 @@ const ERC20_ABI = [
     },
 ];
 
-// ==================== MAIN ====================
 async function detectTimeboost() {
     const rpcUrl = RPC_BY_CHAIN_ID[CHAIN_ID];
     if (!rpcUrl) {
@@ -84,7 +84,7 @@ async function detectTimeboost() {
         process.exit(1);
     }
 
-    console.log(`==================== TIMEBOOST DETECTION (Chain ${CHAIN_ID}) ====================`);
+    console.log(`TIMEBOOST DETECTION (Chain ${CHAIN_ID})`);
 
     const auctionAddress = AUCTION_BY_CHAIN_ID[CHAIN_ID];
     if (!auctionAddress) {
@@ -108,7 +108,8 @@ async function detectTimeboost() {
 
     try {
         const currentRound = await auction.methods.currentRound().call();
-        const roundDuration = await auction.methods.roundDurationSeconds().call();
+        const timing = await auction.methods.roundTimingInfo().call();
+        const roundDuration = timing.roundDurationSeconds ?? timing[1];
         const reservePrice = await auction.methods.reservePrice().call();
         const biddingTokenAddress = await auction.methods.biddingToken().call();
 

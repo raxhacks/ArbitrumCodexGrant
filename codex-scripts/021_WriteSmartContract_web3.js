@@ -1,11 +1,11 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const PRIVATE_KEY = "YOUR_PRIVATE_KEY_HERE";
-const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS_HERE";
+const _bootstrap = new Web3();
+const PRIVATE_KEY = process.env.PRIVATE_KEY || _bootstrap.eth.accounts.create().privateKey;
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0x912CE59144191C1204E64559FE8253a0e49E6548";
+const DRY_RUN = process.env.DRY_RUN !== "false";
 
-// ==================== ABI ====================
 // Replace with your contract's ABI (functions you want to call)
 const CONTRACT_ABI = [
     // Example state-changing functions
@@ -77,24 +77,24 @@ const CONTRACT_ABI = [
     },
 ];
 
-// ==================== TX CONFIGURATION ====================
-const FUNCTION_NAME = "set";                         // Function to call
-const FUNCTION_ARGS = [42];                          // Arguments to pass
+const FUNCTION_NAME = "transfer";
+let FUNCTION_ARGS = null;
 const VALUE_TO_SEND = Web3.utils.toWei("0", "ether"); // ETH to send (0 for non-payable)
 const GAS_LIMIT = null;                              // null = auto estimate
 const MAX_FEE_PER_GAS = null;                        // null = auto
 const MAX_PRIORITY_FEE = null;                        // null = auto
 
-// ==================== MAIN ====================
 async function writeToContract() {
     const web3 = new Web3(RPC_URL);
     const account = web3.eth.accounts.privateKeyToAccount(PRIVATE_KEY);
     web3.eth.accounts.wallet.add(account);
     const contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
 
+    if (FUNCTION_ARGS === null) FUNCTION_ARGS = [account.address, "0"];
+
     const chainId = Number(await web3.eth.getChainId());
 
-    console.log("==================== ACCOUNT ====================");
+    console.log("ACCOUNT");
     console.log("Wallet:", account.address);
     console.log("Chain ID:", chainId);
 
@@ -110,7 +110,7 @@ async function writeToContract() {
     console.log("Contract:", CONTRACT_ADDRESS);
 
     // Encode function call
-    console.log("\n==================== FUNCTION CALL ====================");
+    console.log("\nFUNCTION CALL");
     console.log("Function:", FUNCTION_NAME);
     console.log("Arguments:", FUNCTION_ARGS);
     console.log("Value:", Web3.utils.fromWei(VALUE_TO_SEND, "ether"), "ETH");
@@ -120,7 +120,7 @@ async function writeToContract() {
     console.log("Encoded data:", encodedData);
 
     // Estimate gas
-    console.log("\n==================== GAS ESTIMATION ====================");
+    console.log("\nGAS ESTIMATION");
     const gasPrice = await web3.eth.getGasPrice();
     console.log("Gas price:", Web3.utils.fromWei(gasPrice, "gwei"), "gwei");
 
@@ -147,7 +147,7 @@ async function writeToContract() {
     console.log("Nonce:", nonce.toString());
 
     // Simulate call
-    console.log("\n==================== SIMULATION ====================");
+    console.log("\nSIMULATION");
     try {
         const result = await txMethod.call({
             from: account.address,
@@ -171,13 +171,15 @@ async function writeToContract() {
     if (MAX_FEE_PER_GAS) txOptions.maxFeePerGas = MAX_FEE_PER_GAS;
     if (MAX_PRIORITY_FEE) txOptions.maxPriorityFeePerGas = MAX_PRIORITY_FEE;
 
+    if (DRY_RUN) return;
+
     // Send transaction
-    console.log("\n==================== SENDING TRANSACTION ====================");
+    console.log("\nSENDING TRANSACTION");
     const receipt = await txMethod.send(txOptions);
 
     console.log("Tx hash:", receipt.transactionHash);
 
-    console.log("\n==================== RECEIPT ====================");
+    console.log("\nRECEIPT");
     console.log("Status:", receipt.status ? "SUCCESS" : "REVERTED");
     console.log("Block:", receipt.blockNumber.toString());
     console.log("Gas used:", receipt.gasUsed.toString());
@@ -186,7 +188,7 @@ async function writeToContract() {
 
     // Decode logs
     if (receipt.logs && receipt.logs.length > 0) {
-        console.log("\n==================== EVENTS ====================");
+        console.log("\nEVENTS");
         console.log("Total events:", receipt.logs.length);
 
         const eventAbis = CONTRACT_ABI.filter((item) => item.type === "event");

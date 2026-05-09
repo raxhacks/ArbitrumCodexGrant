@@ -1,10 +1,8 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const TX_HASH = "YOUR_TX_HASH_HERE";
+const TX_HASH = process.env.TX_HASH || "0xa769dd1b0394f928dbcc11f51fc8913b48fbf8b2cfe95baa3e013ea213bb8526";
 
-// ==================== MAIN ====================
 async function getTxByHash() {
     const web3 = new Web3(RPC_URL);
 
@@ -15,21 +13,21 @@ async function getTxByHash() {
         process.exit(1);
     }
 
-    console.log("==================== TRANSACTION ====================");
+    console.log("TRANSACTION");
     console.log("Hash:", tx.hash);
     console.log("Status:", tx.blockNumber ? "MINED" : "PENDING");
     console.log("Block:", tx.blockNumber ? tx.blockNumber.toString() : "pending");
     console.log("Index:", tx.transactionIndex ? tx.transactionIndex.toString() : "N/A");
 
-    console.log("\n==================== ADDRESSES ====================");
+    console.log("\nADDRESSES");
     console.log("From:", tx.from);
     console.log("To:", tx.to || "(contract creation)");
 
-    console.log("\n==================== VALUE ====================");
+    console.log("\nVALUE");
     console.log("Value:", Web3.utils.fromWei(tx.value.toString(), "ether"), "ETH");
     console.log("Value (wei):", tx.value.toString());
 
-    console.log("\n==================== GAS ====================");
+    console.log("\nGAS");
     console.log("Gas limit:", tx.gas.toString());
     console.log("Type:", tx.type.toString());
     if (tx.gasPrice) {
@@ -42,14 +40,14 @@ async function getTxByHash() {
         console.log("Max priority fee:", Web3.utils.fromWei(tx.maxPriorityFeePerGas.toString(), "gwei"), "gwei");
     }
 
-    console.log("\n==================== SIGNATURE ====================");
+    console.log("\nSIGNATURE");
     console.log("Nonce:", tx.nonce.toString());
     console.log("Chain ID:", tx.chainId ? tx.chainId.toString() : "N/A");
     if (tx.v) console.log("v:", tx.v.toString());
     if (tx.r) console.log("r:", tx.r);
     if (tx.s) console.log("s:", tx.s);
 
-    console.log("\n==================== INPUT DATA ====================");
+    console.log("\nINPUT DATA");
     if (tx.input === "0x") {
         console.log("Data: (empty - native transfer)");
     } else {
@@ -60,7 +58,7 @@ async function getTxByHash() {
 
     // Access list (EIP-2930)
     if (tx.accessList && tx.accessList.length > 0) {
-        console.log("\n==================== ACCESS LIST ====================");
+        console.log("\nACCESS LIST");
         console.log("Entries:", tx.accessList.length);
         tx.accessList.forEach((entry, i) => {
             console.log(`\n  [${i}] Address: ${entry.address}`);
@@ -77,12 +75,12 @@ async function getTxByHash() {
     // Fetch receipt
     const receipt = await web3.eth.getTransactionReceipt(TX_HASH);
     if (!receipt) {
-        console.log("\n==================== RECEIPT ====================");
+        console.log("\nRECEIPT");
         console.log("Receipt not available (tx may be pending)");
         return;
     }
 
-    console.log("\n==================== RECEIPT ====================");
+    console.log("\nRECEIPT");
     console.log("Status:", receipt.status ? "SUCCESS" : "REVERTED");
     console.log("Block:", receipt.blockNumber.toString());
     console.log("Block hash:", receipt.blockHash);
@@ -99,7 +97,7 @@ async function getTxByHash() {
     console.log("Log bloom:", receipt.logsBloom.slice(0, 66) + "...");
 
     // Logs
-    console.log("\n==================== LOGS ====================");
+    console.log("\nLOGS");
     console.log("Total logs:", receipt.logs.length);
 
     receipt.logs.forEach((log, i) => {
@@ -118,7 +116,7 @@ async function getTxByHash() {
     // Block timestamp
     const block = await web3.eth.getBlock(Number(receipt.blockNumber));
     if (block) {
-        console.log("\n==================== TIMING ====================");
+        console.log("\nTIMING");
         console.log("Block timestamp:", new Date(Number(block.timestamp) * 1000).toISOString());
     }
 }

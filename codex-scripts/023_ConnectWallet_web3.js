@@ -1,10 +1,9 @@
 const { Web3 } = require("web3");
 
-// ==================== CONFIGURATION ====================
 const RPC_URL = "https://arb1.arbitrum.io/rpc";
-const PRIVATE_KEY = "YOUR_PRIVATE_KEY_HERE";
+const _bootstrap = new Web3();
+const PRIVATE_KEY = process.env.PRIVATE_KEY || _bootstrap.eth.accounts.create().privateKey;
 
-// ==================== KNOWN CHAINS ====================
 const CHAINS = {
     1: { name: "Ethereum Mainnet", currency: "ETH" },
     42161: { name: "Arbitrum One", currency: "ETH" },
@@ -18,10 +17,9 @@ const CHAINS = {
     11155111: { name: "Sepolia", currency: "ETH" },
 };
 
-// ==================== MAIN ====================
 async function connectWallet() {
     // Connect provider
-    console.log("==================== CONNECTING ====================");
+    console.log("CONNECTING");
     console.log("RPC:", RPC_URL);
 
     const web3 = new Web3(RPC_URL);
@@ -41,7 +39,7 @@ async function connectWallet() {
     const chainId = Number(await web3.eth.getChainId());
     const chainInfo = CHAINS[chainId] || { name: "Unknown", currency: "ETH" };
 
-    console.log("\n==================== NETWORK ====================");
+    console.log("\nNETWORK");
     console.log("Chain ID:", chainId);
     console.log("Network:", chainInfo.name);
     console.log("Currency:", chainInfo.currency);
@@ -54,7 +52,7 @@ async function connectWallet() {
 
     // Fee data
     const gasPrice = await web3.eth.getGasPrice();
-    console.log("\n==================== GAS FEES ====================");
+    console.log("\nGAS FEES");
     console.log("Gas price:", Web3.utils.fromWei(gasPrice, "gwei"), "gwei");
 
     try {
@@ -72,7 +70,7 @@ async function connectWallet() {
     }
 
     // Connect wallet
-    console.log("\n==================== WALLET ====================");
+    console.log("\nWALLET");
     const account = web3.eth.accounts.privateKeyToAccount(PRIVATE_KEY);
     web3.eth.accounts.wallet.add(account);
 
@@ -98,7 +96,7 @@ async function connectWallet() {
     console.log("Is EOA:", walletCode === "0x");
 
     // Sign a test message to verify wallet works
-    console.log("\n==================== SIGN TEST ====================");
+    console.log("\nSIGN TEST");
     const testMessage = "Wallet connection test";
     const signature = account.sign(testMessage);
     const recovered = web3.eth.accounts.recover(testMessage, signature.v, signature.r, signature.s);
@@ -110,7 +108,7 @@ async function connectWallet() {
     console.log("Verified:", recovered.toLowerCase() === account.address.toLowerCase());
 
     // Summary
-    console.log("\n==================== CONNECTION SUMMARY ====================");
+    console.log("\nCONNECTION SUMMARY");
     console.log("Status: CONNECTED");
     console.log("Network:", chainInfo.name, `(${chainId})`);
     console.log("Address:", account.address);

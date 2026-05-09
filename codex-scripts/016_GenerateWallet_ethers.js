@@ -1,11 +1,9 @@
 const { ethers } = require("ethers");
 
-// ==================== CONFIGURATION ====================
 const NUM_WALLETS = 1; // Number of wallets to generate
 
-// ==================== MAIN ====================
 function generateWallets() {
-    console.log("==================== WALLET GENERATOR ====================\n");
+    console.log("WALLET GENERATOR\n");
 
     for (let i = 0; i < NUM_WALLETS; i++) {
         const wallet = ethers.Wallet.createRandom();
@@ -21,7 +19,7 @@ function generateWallets() {
         console.log("");
     }
 
-    console.log("==================== WARNING ====================");
+    console.log("WARNING");
     console.log("Store your private key and mnemonic securely.");
     console.log("Never share them or commit them to version control.");
     console.log("Anyone with access to these can control your funds.");
