@@ -41,6 +41,9 @@ ArbitrumCodexGrant/
 │   ├── 001-029 ethers.js # ethers.js implementations
 │   ├── 001-029 web3.js   # web3.js implementations
 │   └── 001 .sol          # Solidity contracts
+├── docs/                 # Technical documentation & guides
+├── CONTRIBUTING.md       # Contribution process & snippet contract
+├── SECURITY.md           # Vulnerability reporting & security model
 └── README.md
 ```
 
@@ -89,6 +92,21 @@ npm install
 node <script_name>.js
 ```
 
+## Documentation
+
+Full documentation lives in [`docs/`](docs/README.md).
+
+| Guide | What it covers |
+|---|---|
+| [Getting Started](docs/getting-started.md) | Using the platform, running snippets locally, running the full stack |
+| [Snippet Catalog](docs/snippet-catalog.md) | Every snippet, its variants, inputs, and whether it runs unmodified |
+| [Integration Guide](docs/integration-guide.md) | Taking a snippet into your own application |
+| [API Reference](docs/api-reference.md) | Every endpoint, request and response shape, and error code |
+| [Architecture](docs/architecture.md) | How the registry, sandbox, API, and interface fit together |
+| [Authoring Snippets](docs/authoring-snippets.md) | The contract a new snippet has to meet |
+| [Deployment](docs/deployment.md) | Self-hosting the backend and frontend |
+| [Troubleshooting](docs/troubleshooting.md) | Errors you may hit, and what they mean |
+
 ## Code Snippets
 
 All snippets are available in both **ethers.js** and **web3.js** versions.
@@ -133,7 +151,7 @@ All snippets are available in both **ethers.js** and **web3.js** versions.
 | 2 | Frontend Development | Completed |
 | 3 | Backend Development | Completed |
 | 4 | Fullstack Integration | Completed |
-| 5 | Documentation & Grant Reporting | Pending |
+| 5 | Documentation & Grant Reporting | In progress |
 
 ### Milestone 1: Code Snippet Library & Testing Infrastructure
 
@@ -150,3 +168,17 @@ Production-ready backend service powering snippet discovery and live in-browser 
 ### Milestone 4: Fullstack Integration
 
 Fully integrated fullstack pipeline connecting the frontend interface to the backend API and execution sandbox. Snippets and categories are now fetched dynamically at runtime through a typed API client and a dedicated React hook with abort handling, loading state, and graceful error reporting. Each snippet card exposes a one-click Run action that executes the selected ethers.js or web3.js variant against the backend and renders the resulting logs and outputs directly in the browser, with developer-friendly handling for rate limits, missing variants, and timeouts.
+
+### Milestone 5: Documentation & Grant Reporting
+
+Complete documentation set covering the platform end to end, plus the protocols that let the library grow through community contribution. [`docs/`](docs/README.md) holds onboarding for first-time users, a full catalog of every snippet with its inputs and execution status, an integration guide for moving snippet code into production applications, a complete REST API reference, an architecture document covering the registry and execution sandbox with its explicit security boundary, an authoring guide defining the contract a new snippet must meet, a self-hosting deployment guide, and a troubleshooting reference. Community protocols are established through [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), [SECURITY.md](SECURITY.md), issue and pull request templates, and MIT licensing of the entire library.
+
+## Contributing
+
+New snippets, fixes, and platform improvements are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) for the process and [Authoring Snippets](docs/authoring-snippets.md) for the technical contract every snippet has to meet.
+
+Report security issues privately — see [SECURITY.md](SECURITY.md). Participation is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## License
+
+MIT — see [LICENSE](LICENSE). The snippets are free to use in commercial and closed-source work.

@@ -1,17 +1,23 @@
 {
-  "name": "1st",
+  "name": "codex-scripts",
   "version": "1.0.0",
-  "main": "002_StylusCacheBidSubmit_ethers.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "main": "025_GetBlockNumber_ethers.js",
+  "keywords": [
+    "arbitrum",
+    "ethers",
+    "web3",
+    "stylus",
+    "timeboost"
+  ],
+  "license": "MIT",
+  "description": "Standalone Arbitrum code snippets, runnable with node",
   "dependencies": {
     "ethereum-cryptography": "^3.2.0",
     "ethers": "^6.16.0",
     "web3": "^4.16.0"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=20"
   }
 }

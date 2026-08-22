@@ -72,7 +72,7 @@ export default function Home() {
       );
     }
     return snippets.filter((s) => s.category === effectiveCategory);
-  }, [activeCategory, effectiveCategory, search, snippets]);
+  }, [effectiveCategory, search, snippets]);
 
   return (
     <div className="flex h-screen overflow-hidden relative">
@@ -151,6 +151,7 @@ export default function Home() {
 
       <main className="flex-1 overflow-y-auto relative">
         <div className="absolute top-6 right-8 z-10">
+          {/* eslint-disable-next-line @next/next/no-img-element -- static vector logo; next/image has nothing to optimize on an SVG */}
           <img src="/logo.svg" alt="Arbitrum Codex" className="w-32 h-32 opacity-80 hover:opacity-100 transition-opacity" />
         </div>
 

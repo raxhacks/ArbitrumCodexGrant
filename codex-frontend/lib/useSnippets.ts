@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchSnippets, fetchCategories, type Snippet, type CategoryInfo } from "./api";
 
 export interface SnippetsState {
@@ -19,10 +19,10 @@ export function useSnippets(): SnippetsState {
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
+  // Loading and error state are reset in reload(), not here: setting state
+  // synchronously in an effect body triggers a cascading render.
   useEffect(() => {
     const ctrl = new AbortController();
-    setIsLoading(true);
-    setError(null);
 
     Promise.all([fetchSnippets(ctrl.signal), fetchCategories(ctrl.signal)])
       .then(([s, c]) => {
@@ -33,12 +33,21 @@ export function useSnippets(): SnippetsState {
         if ((err as Error).name === "AbortError") return;
         setError((err as Error).message);
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        // A superseded request must not clear the loading state of its replacement.
+        if (!ctrl.signal.aborted) setIsLoading(false);
+      });
 
     return () => ctrl.abort();
   }, [tick]);
 
   const categoryNames = useMemo(() => categories.map((c) => c.name), [categories]);
+
+  const reload = useCallback(() => {
+    setIsLoading(true);
+    setError(null);
+    setTick((t) => t + 1);
+  }, []);
 
   return {
     snippets,
@@ -46,6 +55,6 @@ export function useSnippets(): SnippetsState {
     categoryNames,
     isLoading,
     error,
-    reload: () => setTick((t) => t + 1),
+    reload,
   };
 }
